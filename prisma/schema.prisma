@@ -1,0 +1,97 @@
+// Skema database Aplikasi Tiket Antrian.
+// Development: SQLite. Production: PostgreSQL (lihat README bagian "Deploy").
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  importFileExtension = ""
+  moduleFormat        = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model EventDay {
+  id       String    @id @default(cuid())
+  date     String    @unique // "2026-11-27"
+  label    String
+  sessions Session[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  eventDayId String
+  eventDay   EventDay @relation(fields: [eventDayId], references: [id])
+  order      Int // 1..6
+  startTime  String // "10:00"
+  endTime    String // "10:45"
+  queueStart Int // 1, 31, 61, ...
+  queueEnd   Int // 30, 60, 90, ...
+  tickets    Ticket[]
+  holds      Hold[]
+
+  @@unique([eventDayId, order])
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  code        String       @unique // kode pendek, mis. "JM-027-X7K2"
+  sessionId   String
+  session     Session      @relation(fields: [sessionId], references: [id])
+  date        String // duplikasi untuk unique constraint
+  queueNumber Int
+  name        String
+  phone       String // dinormalisasi ke format 08xx
+  email       String?
+  status      TicketStatus @default(BOOKED)
+  checkedInAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@unique([date, queueNumber]) // CEGAH double booking di level DB
+  @@index([phone])
+}
+
+// Kunci sementara (5 menit) saat pengunjung berada di halaman checkout.
+model Hold {
+  id          String   @id @default(cuid())
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id])
+  date        String
+  queueNumber Int
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([date, queueNumber])
+}
+
+// Arsip tiket yang dibatalkan. Baris Ticket dihapus saat dibatalkan agar
+// unique (date, queueNumber) tetap konsisten dan nomornya bisa dipesan lagi.
+model CancelledTicket {
+  id           String    @id @default(cuid())
+  code         String
+  sessionId    String
+  date         String
+  queueNumber  Int
+  name         String
+  phone        String
+  email        String?
+  checkedInAt  DateTime?
+  bookedAt     DateTime
+  cancelledAt  DateTime  @default(now())
+
+  @@index([date])
+}
+
+// Nomor antrian yang sedang dilayani, satu baris per tanggal.
+model NowServing {
+  date      String   @id
+  number    Int
+  updatedAt DateTime @updatedAt
+}
+
+enum TicketStatus {
+  BOOKED
+  CHECKED_IN
+  CANCELLED
+}

@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0d0b14;
+  background-image: radial-gradient(60rem 30rem at 50% -10rem, rgb(var(--primary) / 0.1), transparent 70%);
+  background-repeat: no-repeat;
+  color: #f4f1ea;
+  min-height: 100dvh;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-primary-fg hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-panel text-stone-100 hover:border-stone-500;
+  }
+  .btn-danger {
+    @apply btn border border-red-500/50 bg-red-500/10 text-red-200 hover:bg-red-500/20;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-panel;
+  }
+  .input {
+    @apply block min-h-[44px] w-full rounded-xl border border-line bg-ink px-3.5 py-2.5 text-base text-stone-100 placeholder:text-stone-500
+      focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-stone-200;
+  }
+
+  /* ---------- Tiket bergaya bioskop ---------- */
+  .ticket {
+    @apply relative mx-auto w-full max-w-sm bg-paper text-stone-900;
+    border-radius: 18px;
+  }
+  /* Sisi bergerigi atas & bawah */
+  .ticket-edge {
+    height: 10px;
+    background-image: radial-gradient(circle at 8px 0, var(--ticket-bg, #0d0b14) 5px, transparent 5.5px);
+    background-size: 16px 10px;
+    background-repeat: repeat-x;
+  }
+  .ticket-edge-bottom {
+    transform: rotate(180deg);
+  }
+  /* Garis sobekan dengan lekukan di kiri & kanan */
+  .ticket-tear {
+    @apply relative my-1 border-t-2 border-dashed border-stone-400/70;
+  }
+  .ticket-tear::before,
+  .ticket-tear::after {
+    content: "";
+    @apply absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full;
+    background: var(--ticket-bg, #0d0b14);
+  }
+  .ticket-tear::before {
+    left: -12px;
+  }
+  .ticket-tear::after {
+    right: -12px;
+  }
+  .queue-number {
+    @apply font-mono font-black leading-none tracking-tighter;
+    font-variant-numeric: tabular-nums;
+  }
+}
