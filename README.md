@@ -79,18 +79,42 @@ npm run build
 
 ## Deploy ke Vercel + PostgreSQL
 
-SQLite tidak bisa dipakai di Vercel (filesystem tidak permanen), jadi production memakai PostgreSQL (Vercel Postgres, Neon, Supabase, dll.).
+SQLite tidak bisa dipakai di Vercel (filesystem tidak permanen), jadi production memakai PostgreSQL. Repo ini sudah siap: cukup klik-klik di dashboard Vercel, tidak perlu Node.js di komputer sendiri.
 
-1. Di `prisma/schema.prisma` ganti `provider = "sqlite"` menjadi `provider = "postgresql"`.
-2. Migrasi SQLite tidak kompatibel dengan PostgreSQL. Hapus folder `prisma/migrations`, set `DATABASE_URL` ke database PostgreSQL, lalu buat migrasi baru:
-   ```bash
-   npx prisma migrate dev --name init
-   ```
-3. Commit perubahan dan import repo ke Vercel. Isi Environment Variables: `DATABASE_URL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_URL` (mis. `https://antrian.contoh.id`).
-4. Build command bawaan (`npm run build` = `prisma generate && next build`) sudah cukup. Untuk menerapkan migrasi otomatis saat deploy, ubah build command menjadi `prisma migrate deploy && npm run build`.
-5. Seed jadwal sekali ke database production: `DATABASE_URL="postgresql://…" npm run seed`.
+> Jangan pakai fitur deploy dari Prisma (Prisma Compute): fitur itu mewajibkan Prisma ORM 8, sedangkan aplikasi ini memakai Prisma 7.
 
-`src/lib/prisma.ts` memilih driver secara otomatis dari awalan `DATABASE_URL` (`file:` → better-sqlite3, `postgres://` → pg), jadi tidak ada kode lain yang perlu diubah. Gunakan connection string *pooled* untuk serverless.
+1. Di [vercel.com](https://vercel.com): **Add New → Project**, import repo GitHub ini. Jangan klik Deploy dulu.
+2. Di project tersebut buka tab **Storage → Create Database → Neon (Postgres)**, lalu hubungkan ke project. Vercel otomatis mengisi `DATABASE_URL` (pooled) dan `DATABASE_URL_UNPOOLED` (untuk migrasi).
+3. **Settings → Environment Variables**, tambahkan:
+   - `ADMIN_PASSWORD`: password halaman `/admin`
+   - `NEXT_PUBLIC_BASE_URL`: URL aplikasi, mis. `https://warehousesale.vercel.app` (bisa diisi setelah tahu domainnya, lalu Redeploy)
+4. **Deploy** (atau **Redeploy**). `vercel.json` menjalankan `npm run vercel-build`, yang berisi:
+   1. `scripts/predeploy-check.mjs`: berhenti dengan pesan jelas bila `DATABASE_URL` bukan PostgreSQL atau `ADMIN_PASSWORD` kosong
+   2. `prisma generate` + `prisma migrate deploy`: membuat/memperbarui tabel
+   3. seed jadwal (aman diulang; perubahan di `src/config/schedule.ts` ikut terbawa tiap deploy, jadi jangan ubah rentang nomor sesi yang tiketnya sudah terjual)
+   4. `next build`
+
+### Dua database: SQLite (lokal) dan PostgreSQL (production)
+
+`DATABASE_URL` menentukan semuanya. `prisma.config.ts` memilih schema & folder migrasi, dan `src/lib/prisma.ts` memilih driver:
+
+| `DATABASE_URL` | Schema | Migrasi |
+|---|---|---|
+| `file:./dev.db` | `prisma/schema.prisma` | `prisma/migrations` |
+| `postgresql://…` | `prisma/postgresql/schema.prisma` | `prisma/postgresql/migrations` |
+
+`prisma/schema.prisma` adalah satu-satunya yang diedit. Versi PostgreSQL dibuat otomatis darinya. Bila mengubah model:
+
+```bash
+# 1. edit prisma/schema.prisma, lalu buat migrasi SQLite
+npx prisma migrate dev --name nama_perubahan
+# 2. salin perubahan ke schema PostgreSQL
+npm run db:pg-schema
+# 3. buat migrasi PostgreSQL (pakai database Postgres kosong untuk development, mis. branch Neon)
+DATABASE_URL="postgresql://…" npx prisma migrate dev --name nama_perubahan
+```
+
+Commit kedua folder migrasi. Build Vercel gagal dengan pesan jelas bila langkah 2 terlupa.
 
 ## Struktur
 
