@@ -28,6 +28,8 @@ npm run dev                 # http://localhost:3000
 | `ADMIN_PASSWORD` | Password login `/admin` |
 | `NEXT_PUBLIC_BASE_URL` | URL publik, dipakai untuk link tiket di tombol "Bagikan ke WhatsApp" |
 
+**npm 12+ dan `allowScripts`.** npm 12 memblokir install script dependensi kecuali diizinkan di field `allowScripts` pada `package.json`. Yang diizinkan: `prisma`, `@prisma/engines`, `esbuild`, dan `better-sqlite3@12.11.1` (driver SQLite yang dipakai aplikasi, memakai binary siap pakai). `better-sqlite3@13.1.1` sengaja ditolak karena harus dikompilasi dari source dan hanya dipakai `scripts/db-init.ts`. Bila versi paket-paket ini berubah, jalankan `npm install-scripts ls` lalu perbarui daftarnya.
+
 ## Halaman
 
 | Publik | |

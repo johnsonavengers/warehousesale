@@ -11,6 +11,7 @@ import {
   getNowServing,
   getSeats,
   getSessionsForDay,
+  listTickets,
   setNowServing,
 } from "@/lib/booking";
 import { AppError } from "@/lib/errors";
@@ -290,5 +291,18 @@ describe("sekarang dipanggil", () => {
     await expectAppError(setNowServing(FRI, 181), 400);
     await expectAppError(setNowServing("2026-12-01", 1), 404);
     expect((await setNowServing(FRI, 0)).number).toBeNull();
+  });
+});
+
+describe("pencarian tiket di admin", () => {
+  it("tidak peka huruf besar-kecil untuk nama & kode, dan menerima HP berspasi", async () => {
+    const s = await sessionOf(FRI, 2);
+    const t = await book(s.id, 33, "081234567890");
+    for (const q of ["Budi", "budi", "SANTOSO", "budi santoso", t.code.toLowerCase(), "0812 3456-7890"]) {
+      const found = await listTickets({ q });
+      expect(found.map((x) => x.code), `q=${q}`).toEqual([t.code]);
+    }
+    expect(await listTickets({ q: "tidak-ada" })).toEqual([]);
+    expect(await listTickets({ q: "budi", date: SAT })).toEqual([]);
   });
 });

@@ -537,26 +537,28 @@ export type TicketFilter = {
 };
 
 export async function listTickets(filter: TicketFilter = {}): Promise<TicketView[]> {
-  const q = filter.q?.trim();
   const tickets = await prisma.ticket.findMany({
     where: {
       ...(filter.date ? { date: filter.date } : {}),
       ...(filter.status ? { status: filter.status } : {}),
       ...(filter.sessionOrder ? { session: { order: filter.sessionOrder } } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q } },
-              { phone: { contains: q.replace(/[\s-]/g, "") } },
-              { code: { contains: q.toUpperCase() } },
-            ],
-          }
-        : {}),
     },
     include: ticketInclude,
     orderBy: [{ date: "asc" }, { queueNumber: "asc" }],
   });
-  return tickets.map(toTicketView);
+  const views = tickets.map(toTicketView);
+
+  // Pencarian dilakukan di sini (bukan di query) agar tidak peka huruf besar-kecil
+  // di SQLite maupun PostgreSQL. Jumlah tiket kecil (maks. 540), jadi ringan.
+  const q = filter.q?.trim().toLowerCase();
+  if (!q) return views;
+  const qPhone = q.replace(/[\s\-().]/g, "");
+  return views.filter(
+    (t) =>
+      t.name.toLowerCase().includes(q) ||
+      t.code.toLowerCase().includes(q) ||
+      (qPhone.length > 0 && t.phone.includes(qPhone)),
+  );
 }
 
 export type DashboardDay = {
