@@ -1,50 +1,5 @@
-const STEPS = ["Tanggal", "Sesi", "Nomor", "Data", "Tiket"] as const;
-
-/** Stepper: Tanggal → Sesi → Nomor → Data → Tiket. `current` = indeks langkah aktif (0-4). */
-export function Stepper({ current }: { current: 0 | 1 | 2 | 3 | 4 }) {
-  return (
-    <nav aria-label="Langkah pemesanan" className="mb-6">
-      <ol className="flex items-center">
-        {STEPS.map((label, i) => {
-          const done = i < current;
-          const active = i === current;
-          return (
-            <li key={label} className="flex flex-1 items-center last:flex-none">
-              <div
-                className="flex flex-col items-center gap-1"
-                aria-current={active ? "step" : undefined}
-              >
-                <span
-                  className={
-                    "grid h-7 w-7 place-items-center rounded-full text-xs font-bold " +
-                    (active
-                      ? "bg-primary text-primary-fg shadow-[0_0_16px_rgb(var(--primary)/0.55)]"
-                      : done
-                        ? "bg-primary/25 text-primary"
-                        : "border border-white/15 bg-white/[0.06] text-stone-400")
-                  }
-                >
-                  {done ? "✓" : i + 1}
-                </span>
-                <span
-                  className={
-                    "text-[11px] font-medium sm:text-xs " +
-                    (active ? "text-stone-50" : "text-stone-400")
-                  }
-                >
-                  {label}
-                </span>
-              </div>
-              {i < STEPS.length - 1 && (
-                <span
-                  aria-hidden
-                  className={"mx-1.5 mb-5 h-px flex-1 " + (done ? "bg-primary/60" : "bg-line")}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
+import { Icon } from "./Icon";
+const STEPS = ["Tanggal", "Data diri", "Tiket"] as const;
+export function Stepper({ current }: { current: 0 | 1 | 2 }) {
+  return <nav aria-label="Langkah pemesanan" className="mb-8 max-w-md"><ol className="flex items-center">{STEPS.map((label, i) => <li key={label} className="flex flex-1 items-center last:flex-none"><div aria-current={i === current ? "step" : undefined} className="flex items-center gap-2"><span className={"grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold " + (i === current ? "bg-primary text-primary-fg" : i < current ? "bg-primary/15 text-primary" : "border border-white/15 text-stone-400")}>{i < current ? <Icon name="check" className="h-3 w-3" /> : `0${i + 1}`}</span><span className={"whitespace-nowrap text-[11px] font-medium sm:text-xs " + (i === current ? "text-white" : "text-stone-400")}>{label}</span></div>{i < STEPS.length - 1 && <span aria-hidden className="mx-2 h-px flex-1 bg-white/10 sm:mx-4" />}</li>)}</ol></nav>;
 }

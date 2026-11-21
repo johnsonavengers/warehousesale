@@ -22,18 +22,24 @@ const EXPECTED: Record<string, typeof FRIDAY | typeof WEEKEND> = {
   "2026-11-27": FRIDAY,
   "2026-11-28": WEEKEND,
   "2026-11-29": WEEKEND,
+  "2026-12-04": FRIDAY,
+  "2026-12-05": WEEKEND,
+  "2026-12-06": WEEKEND,
+  "2026-12-11": FRIDAY,
+  "2026-12-12": WEEKEND,
+  "2026-12-13": WEEKEND,
 };
 
 describe("konfigurasi jadwal", () => {
-  it("3 hari × 6 sesi = 18 sesi, 30 nomor per sesi, 540 tiket", () => {
+  it("9 hari × 6 sesi = 54 sesi, 30 nomor per sesi, 1620 tiket", () => {
     const data = buildSeedData();
-    expect(data).toHaveLength(3);
-    expect(data.flatMap((d) => d.sessions)).toHaveLength(18);
+    expect(data).toHaveLength(9);
+    expect(data.flatMap((d) => d.sessions)).toHaveLength(54);
     expect(SLOT_CAPACITY).toBe(30);
     const total = data
       .flatMap((d) => d.sessions)
       .reduce((a, s) => a + (s.queueEnd - s.queueStart + 1), 0);
-    expect(total).toBe(540);
+    expect(total).toBe(1620);
   });
 
   it.each(Object.keys(EXPECTED))("jam & rentang nomor %s cocok dengan tabel spesifikasi", (date) => {

@@ -10,7 +10,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 function createClient(): PrismaClient {
   const url = process.env.DATABASE_URL ?? "file:./dev.db";
   const adapter = /^postgres(ql)?:\/\//.test(url)
-    ? new PrismaPg({ connectionString: url })
+    ? new PrismaPg({ connectionString: url }, { schema: new URL(url).searchParams.get("schema") ?? undefined })
     : new PrismaBetterSqlite3({ url });
   return new PrismaClient({ adapter });
 }

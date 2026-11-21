@@ -2,6 +2,7 @@
  * Layanan inti pemesanan: ketersediaan, hold, tiket, check-in, pembatalan.
  * Semua fungsi menerima `now` (default: waktu saat ini) supaya mudah diuji.
  */
+import { Prisma } from "@/generated/prisma/client";
 import { BOOKING_RULES } from "@/config/event";
 import { SLOT_CAPACITY, getScheduleDay } from "@/config/schedule";
 import { AppError, SEAT_TAKEN_MESSAGE, isUniqueViolation } from "./errors";
@@ -25,6 +26,9 @@ export type TicketView = {
   createdAt: string;
   session: { id: string; order: number; startTime: string; endTime: string };
 };
+
+// Enum yang dihasilkan mengikuti provider (SQLite atau PostgreSQL).
+const isolationLevels: Record<string, Prisma.TransactionIsolationLevel> = Prisma.TransactionIsolationLevel;
 
 const ticketInclude = { session: { include: { eventDay: true } } } as const;
 
@@ -351,6 +355,71 @@ export async function releaseHold(id: string): Promise<void> {
 const HOLD_EXPIRED_MESSAGE =
   "Waktu pemesanan habis atau nomor sudah dilepas. Silakan pilih nomor lagi.";
 
+/** Lock baris tanggal sebelum membaca kuota: aman antar instance/server Vercel. */
+export async function createAutomaticTicket(
+  input: { date: string; name: string; phone: string; email?: string | null },
+  now?: Date,
+): Promise<TicketView> {
+  if (!getScheduleDay(input.date)) throw new AppError(404, "Tanggal tidak tersedia.");
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      const ticket = await prisma.$transaction(async (tx) => {
+        // UPDATE memegang row lock hingga commit. Request berikutnya baru membaca
+        // nomor dan batas WhatsApp setelah tiket request sebelumnya tersimpan.
+        const locked = await tx.eventDay.updateMany({
+          where: { date: input.date },
+          data: { bookingRevision: { increment: 1 } },
+        });
+        if (!locked.count) throw new AppError(404, "Tanggal tidak tersedia.");
+        const current = now ?? getNow();
+        const day = await tx.eventDay.findUniqueOrThrow({
+          where: { date: input.date },
+          include: { sessions: { orderBy: { order: "asc" } } },
+        });
+        const sessions = day.sessions.filter((s) =>
+          !isBookingClosed(input.date, s.startTime, current, BOOKING_RULES.bookingCutoffMinutes));
+        if (!sessions.length) throw new AppError(409, "Semua sesi pada tanggal ini sudah ditutup. Silakan pilih tanggal lain.");
+        const active = await tx.ticket.count({ where: { date: input.date, phone: input.phone } });
+        if (active >= BOOKING_RULES.maxActiveTicketsPerPhonePerDay) {
+          throw new AppError(409, "Nomor WhatsApp ini sudah memiliki tiket untuk tanggal tersebut. Buka menu Cari tiket.");
+        }
+        const booked = await tx.ticket.findMany({ where: { date: input.date }, select: { queueNumber: true } });
+        // Hormati reservasi dari versi lama sampai kedaluwarsa.
+        const holds = await tx.hold.findMany({
+          where: { date: input.date, expiresAt: { gt: current } }, select: { queueNumber: true },
+        });
+        const taken = new Set([...booked, ...holds].map((t) => t.queueNumber));
+        for (const session of sessions) {
+          for (let number = session.queueStart; number <= session.queueEnd; number++) {
+            if (taken.has(number)) continue;
+            return tx.ticket.create({
+              data: {
+                date: input.date, sessionId: session.id, queueNumber: number,
+                code: generateTicketCode(input.date, number),
+                name: input.name, phone: input.phone, email: input.email ?? null,
+              },
+              include: ticketInclude,
+            });
+          }
+        }
+        throw new AppError(409, "Kuota tanggal ini sudah penuh. Silakan pilih tanggal lain.");
+      }, {
+        maxWait: 15_000,
+        timeout: 20_000,
+        ...(/^postgres(ql)?:/.test(process.env.DATABASE_URL ?? "")
+          ? { isolationLevel: isolationLevels.ReadCommitted } : {}),
+      });
+      return toTicketView(ticket);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (!["P2002", "P2034", "P2028"].includes(code ?? "")) throw error;
+      if (attempt === 7) throw new AppError(409, "Pemesanan sedang ramai. Coba lagi atau periksa menu Cari tiket.");
+      await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1) + Math.random() * 50));
+    }
+  }
+  throw new AppError(409, "Silakan coba lagi.");
+}
+
 export async function createTicketFromHold(
   input: { holdId: string; name: string; phone: string; email?: string | null },
   now: Date = getNow(),
@@ -549,7 +618,7 @@ export async function listTickets(filter: TicketFilter = {}): Promise<TicketView
   const views = tickets.map(toTicketView);
 
   // Pencarian dilakukan di sini (bukan di query) agar tidak peka huruf besar-kecil
-  // di SQLite maupun PostgreSQL. Jumlah tiket kecil (maks. 540), jadi ringan.
+  // di SQLite maupun PostgreSQL. Jumlah tiket kecil (maks. 1620), jadi ringan.
   const q = filter.q?.trim().toLowerCase();
   if (!q) return views;
   const qPhone = q.replace(/[\s\-().]/g, "");

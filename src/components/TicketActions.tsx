@@ -41,7 +41,7 @@ export function TicketActions({
 
   return (
     <div className="mx-auto mt-6 max-w-sm">
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2.5">
         <button type="button" className="btn-primary whitespace-nowrap px-3" onClick={saveImage} disabled={saving}>
           {saving ? "Menyimpan…" : "Simpan sebagai gambar"}
         </button>

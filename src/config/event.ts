@@ -3,12 +3,12 @@
  */
 export const EVENT = {
   name: "Johnson Warehouse Sale",
-  tagline: "Pesan nomor antrian Anda, datang sesuai sesi.",
+  tagline: "Pilih tanggalmu. Nomor dan sesi kami siapkan otomatis.",
   venue: "Lokasi Event",
   /** Path logo di folder /public (mis. "/logo.png"). Kosongkan untuk memakai inisial. */
   logo: "",
   /** Warna utama (hex). Dipakai untuk tombol, nomor terpilih, aksen tiket. */
-  primaryColor: "#f59e0b",
+  primaryColor: "#ffda45",
   /** Warna teks di atas warna utama. */
   primaryTextColor: "#1c1917",
 } as const;

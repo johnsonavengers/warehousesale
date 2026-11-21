@@ -18,6 +18,7 @@ model EventDay {
   id       String    @id @default(cuid())
   date     String    @unique // "2026-11-27"
   label    String
+  bookingRevision Int @default(0)
   sessions Session[]
 }
 

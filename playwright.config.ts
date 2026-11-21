@@ -22,13 +22,14 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   reporter: [["list"]],
-  use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
+  use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure", launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {} },
   projects: [
+    { name: "mobile-320", use: { viewport: { width: 320, height: 740 }, hasTouch: true, isMobile: true } },
     { name: "mobile-390", use: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } },
     { name: "desktop-1280", use: { viewport: { width: 1280, height: 800 } } },
   ],
   webServer: {
-    command: `tsx scripts/db-init.ts --reset && tsx prisma/seed.ts && next build && next start -p ${PORT}`,
+    command: `prisma generate --schema prisma/schema.prisma && tsx scripts/db-init.ts --reset && tsx prisma/seed.ts && next build && next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: 240_000,

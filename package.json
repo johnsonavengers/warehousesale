@@ -15,8 +15,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:init": "tsx scripts/db-init.ts",
     "setup": "prisma migrate deploy && tsx prisma/seed.ts",
-    "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test": "prisma generate --schema prisma/schema.prisma && vitest run",
+    "test:e2e": "playwright test",
+    "test:postgres": "prisma generate --schema prisma/postgresql/schema.prisma && node scripts/test-postgres-concurrency.mjs"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.1",

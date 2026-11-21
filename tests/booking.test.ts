@@ -40,9 +40,9 @@ async function expectAppError(p: Promise<unknown>, status: number) {
 beforeEach(resetDb);
 
 describe("seed", () => {
-  it("menghasilkan 3 hari × 6 sesi = 18 sesi dengan rentang nomor yang benar", async () => {
-    expect(await prisma.eventDay.count()).toBe(3);
-    expect(await prisma.session.count()).toBe(18);
+  it("menghasilkan 9 hari × 6 sesi = 54 sesi dengan rentang nomor yang benar", async () => {
+    expect(await prisma.eventDay.count()).toBe(9);
+    expect(await prisma.session.count()).toBe(54);
     const fri = await prisma.session.findMany({
       where: { eventDay: { date: FRI } },
       orderBy: { order: "asc" },
@@ -71,7 +71,7 @@ describe("seed", () => {
 
   it("seed idempoten (dijalankan ulang tidak menggandakan data)", async () => {
     await resetDb();
-    expect(await prisma.session.count()).toBe(18);
+    expect(await prisma.session.count()).toBe(54);
   });
 });
 
@@ -110,7 +110,7 @@ describe("daftar sesi & istirahat", () => {
     const s = await sessionOf(FRI, 1);
     await book(s.id, 1, "081234567801");
     const days = await getDaysOverview(BEFORE_EVENT);
-    expect(days.map((d) => [d.date, d.capacity, d.remaining, d.isPast])).toEqual([
+    expect(days.slice(0, 3).map((d) => [d.date, d.capacity, d.remaining, d.isPast])).toEqual([
       [FRI, 180, 179, false],
       [SAT, 180, 180, false],
       ["2026-11-29", 180, 180, false],

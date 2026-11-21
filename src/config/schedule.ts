@@ -53,6 +53,22 @@ export const SCHEDULE: ScheduleDay[] = [
   },
 ];
 
+// Tiga akhir pekan memakai jam sesi yang sama untuk masing-masing hari.
+for (const dates of [
+  ["2026-12-04", "2026-12-05", "2026-12-06"],
+  ["2026-12-11", "2026-12-12", "2026-12-13"],
+]) {
+  dates.forEach((date, index) => {
+    const template = SCHEDULE[index];
+    SCHEDULE.push({
+      date,
+      label: `${["Jumat", "Sabtu", "Minggu"][index]}, ${Number(date.slice(-2))} Des`,
+      sessions: template.sessions.map((s) => ({ ...s })),
+      breaks: template.breaks.map((b) => ({ ...b })),
+    });
+  });
+}
+
 /** Rentang nomor antrian untuk sesi ke-`index` (0-based). */
 export function queueRangeForSession(index: number): { queueStart: number; queueEnd: number } {
   return {

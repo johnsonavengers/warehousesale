@@ -1,0 +1,1 @@
+ALTER TABLE "EventDay" ADD COLUMN "bookingRevision" INTEGER NOT NULL DEFAULT 0;

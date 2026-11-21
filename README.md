@@ -1,8 +1,8 @@
-# Aplikasi Tiket Antrian (gaya tiket bioskop)
+# Johnson Warehouse Sale — tiket otomatis
 
-Web app pemesanan **nomor antrian**: pengunjung memilih tanggal → sesi → nomor dari denah (seperti kursi bioskop) → isi data → dapat **e-tiket dengan QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **export CSV**, dan mengatur nomor yang **sekarang dipanggil**.
+Pengunjung memilih tanggal → isi data → mendapat **e-tiket dengan sesi, nomor otomatis, dan QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **export CSV**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
 
-Event: **Jumat 27 – Minggu 29 November 2026**, zona waktu **Asia/Jakarta (WIB)**, 6 sesi × 30 nomor = 180 nomor/hari (540 tiket).
+Event: **27, 28, 29 November; 4, 5, 6 Desember; 11, 12, 13 Desember 2026**, zona waktu **Asia/Jakarta (WIB)**, 6 sesi × 30 nomor = 180 nomor/hari (1.620 tiket).
 
 ## Tech stack
 
@@ -16,7 +16,7 @@ Butuh Node.js 20+.
 npm install                 # sekaligus menjalankan `prisma generate`
 cp .env.example .env        # lalu isi ADMIN_EMAIL dan ADMIN_PASSWORD
 npx prisma migrate deploy   # membuat tabel di dev.db (SQLite)
-npm run seed                # mengisi 3 hari × 6 sesi dari src/config/schedule.ts
+npm run seed                # mengisi 9 hari × 6 sesi dari src/config/schedule.ts
 npm run dev                 # http://localhost:3000
 ```
 
@@ -38,9 +38,9 @@ Login admin memakai satu akun dari `ADMIN_EMAIL` dan `ADMIN_PASSWORD` pada konfi
 | Publik | |
 |---|---|
 | `/` | Pilih tanggal (sisa kuota per hari; tanggal lewat nonaktif) |
-| `/[date]` | Pilih sesi (blok Istirahat di posisi yang benar; sesi penuh/sudah mulai nonaktif) |
-| `/[date]/[sessionId]` | Denah 30 nomor, legenda, "Pilih nomor otomatis", refresh tiap 5 detik |
-| `/checkout?hold=…` | Isi data; nomor dikunci 5 menit dengan countdown |
+| `/[date]` | Link lama diarahkan ke formulir tanggal tersebut |
+| `/[date]/[sessionId]` | Link lama diarahkan ke formulir tanpa memilih sesi |
+| `/checkout?date=YYYY-MM-DD` | Isi data; sesi dan nomor dialokasikan saat konfirmasi |
 | `/ticket/[code]` | E-tiket + QR, simpan sebagai gambar, bagikan ke WhatsApp |
 | `/cari` | Cari tiket dengan nomor WhatsApp |
 | `/display/[date]` | Layar "Sekarang dipanggil" untuk TV di lokasi |
@@ -55,32 +55,35 @@ Login admin memakai satu akun dari `ADMIN_EMAIL` dan `ADMIN_PASSWORD` pada konfi
 
 - **Jadwal** — `src/config/schedule.ts` adalah satu-satunya sumber kebenaran. Edit, lalu `npm run seed`. Rentang nomor dihitung otomatis: sesi ke-i → `(i×30+1)`–`(i×30+30)`.
 - **Nama event, logo, warna** — `src/config/event.ts` (`EVENT`). Logo ditaruh di `public/`.
-- **Aturan pemesanan** — `BOOKING_RULES` di file yang sama: lama hold, maks. tiket per nomor HP per hari, cut-off pemesanan, toleransi check-in lebih awal, interval refresh denah.
+- **Aturan pemesanan** — `BOOKING_RULES` di file yang sama: maks. tiket per nomor HP per hari, cut-off pemesanan, toleransi check-in lebih awal. Pengaturan hold hanya untuk kompatibilitas data lama.
 
 ## Aturan bisnis yang dijaga
 
-1. **Tanpa double booking** — unique constraint `(date, queueNumber)` di tabel `Ticket` dan `Hold`, plus transaksi. Bentrok → HTTP 409 "Nomor ini baru saja diambil orang lain, silakan pilih nomor lain."
-2. Server memvalidasi nomor berada di rentang sesinya (400 jika tidak).
+1. **Tanpa nomor ganda** — transaksi mengunci baris tanggal (`EventDay.bookingRevision`) sebelum membaca kuota dan membuat tiket. Unique constraint `(date, queueNumber)` menjadi pengaman tambahan. Bentrok transaksi/kode acak dicoba ulang terbatas. Tidak bergantung pada memori satu server.
+2. Nomor terkecil dari sesi paling awal yang belum dimulai dan masih tersedia dipilih otomatis. Sesi penuh dilewati. Nomor dimulai dari 1 setiap tanggal. Batas satu tiket aktif per WhatsApp per tanggal diperiksa dalam transaksi yang sama.
 3. Istirahat tidak punya sesi/nomor sehingga tidak bisa dipesan.
 4. Semua perhitungan waktu memakai Asia/Jakarta (`src/lib/time.ts`), bukan zona server.
 5. Kode tiket seperti `JM-027-X7K2`, tanpa karakter ambigu (0/O, 1/I/L).
-6. Hold kedaluwarsa dibersihkan saat ada request (tanpa cron).
+6. API hanya menerima tanggal, nama, WhatsApp, dan email opsional. Input `sessionId`, `queueNumber`, atau `holdId` ditolak. POST hold lama mengembalikan 410; reservasi lama tetap dihormati hingga kedaluwarsa.
 7. **Pembatalan** memindahkan tiket ke tabel arsip `CancelledTicket` lalu menghapus barisnya, sehingga nomor langsung bisa dipesan lagi dan unique constraint tetap konsisten.
 
-Semua error API berformat `{ "error": "…" }` dengan status 400/401/404/409.
+Migrasi hanya menambah kolom; seed menambahkan enam tanggal Desember melalui upsert tanpa menghapus tiket yang sudah ada. Jika koneksi putus setelah pemesanan, tiket dapat ditemukan lewat menu Cari tiket.
 
 ## Tes
 
 ```bash
 npm test            # Vitest: jadwal vs tabel spesifikasi, util waktu, kode tiket, booking, API, middleware
-npm run test:e2e    # Playwright: alur lengkap di viewport 390px & 1280px
+npm run test:e2e    # Playwright: alur lengkap di viewport 320px, 390px & 1280px
+npm run test:postgres # PostgreSQL: pemesanan serentak dari empat proses
 npm run lint
 npm run build
 ```
 
 - Tes memakai database terpisah (`test.db`, `e2e.db`) yang dibuat oleh `scripts/db-init.ts` langsung dari file migrasi.
 - E2E membekukan waktu lewat env `TEST_NOW` (Jumat 27 Nov 2026 13:40 WIB). **Jangan set `TEST_NOW` di production.**
-- Playwright pertama kali: `npx playwright install chromium`.
+- Playwright pertama kali: `npx playwright install chromium`. Alternatif Chrome lokal: set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` ke executable Chrome.
+- Tes membuat client SQLite; `npm run build` membuat ulang client sesuai database konfigurasi.
+- `test:postgres` memakai schema sementara terisolasi, lalu menghapus schema tersebut. Membutuhkan PostgreSQL di `.env`; data schema publik tidak disentuh.
 
 ## Deploy ke Vercel + PostgreSQL
 

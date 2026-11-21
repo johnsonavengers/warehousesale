@@ -42,6 +42,11 @@ export const createTicketSchema = z.object({
     .transform((v) => (v ? v : null)),
 });
 
+export const automaticTicketSchema = createTicketSchema
+  .omit({ holdId: true })
+  .extend({ date: dateSchema })
+  .strict();
+
 export const checkinSchema = z.object({
   code: z.string({ error: "Kode tiket wajib diisi" }).trim().min(1, "Kode tiket wajib diisi"),
   force: z.boolean().optional().default(false),
