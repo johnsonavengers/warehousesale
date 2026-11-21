@@ -5,6 +5,7 @@ import { useState } from "react";
 
 export function AdminLoginForm() {
   const params = useSearchParams();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -17,7 +18,7 @@ export function AdminLoginForm() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -36,6 +37,23 @@ export function AdminLoginForm() {
 
   return (
     <form onSubmit={submit} className="card mt-5 space-y-4 p-5">
+      <div>
+        <label htmlFor="email" className="label">
+          Email
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          className="input"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
       <div>
         <label htmlFor="password" className="label">
           Password

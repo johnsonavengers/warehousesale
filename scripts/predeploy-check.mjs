@@ -4,6 +4,7 @@
  * daripada aplikasi ter-deploy tapi rusak saat dipakai.
  */
 import { isPostgresSchemaInSync, OUT_OF_SYNC_MESSAGE } from "./postgres-schema.mjs";
+import { z } from "zod";
 
 const errors = [];
 const target = process.env.VERCEL_ENV === "preview" ? "Preview" : "Production";
@@ -48,6 +49,14 @@ if (directKey && !isPostgresUrl(process.env[directKey])) {
     `${directKey} harus berupa URL koneksi PostgreSQL yang valid.\n` +
       "  Isi koneksi langsung dari penyedia database, atau hapus variabel opsional ini\n" +
       "  agar migrasi memakai DATABASE_URL.",
+  );
+}
+
+const email = process.env.ADMIN_EMAIL?.trim() ?? "";
+if (!z.email().safeParse(email).success) {
+  errors.push(
+    "ADMIN_EMAIL belum di-set atau format email tidak valid.\n" +
+      `  Tambahkan email akun admin di ${settings}.`,
   );
 }
 

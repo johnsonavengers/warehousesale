@@ -9,6 +9,7 @@ const PORT = 3100;
  */
 const env = {
   DATABASE_URL: "file:./e2e.db",
+  ADMIN_EMAIL: "admin@example.test",
   ADMIN_PASSWORD: "e2e-password",
   NEXT_PUBLIC_BASE_URL: `http://localhost:${PORT}`,
   TEST_NOW: "2026-11-27T13:40:00+07:00",

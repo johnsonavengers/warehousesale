@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const ADMIN_PASSWORD = "e2e-password";
+const ADMIN_EMAIL = "admin@example.test";
 
 // Tiap project (mobile/desktop) memakai nomor & HP berbeda karena berbagi satu database.
 function fixtureFor(project: string) {
@@ -85,9 +86,10 @@ test("alur utama: tanggal → sesi → nomor → data → e-tiket → check-in a
   // 8. Admin: wajib login
   await page.goto("/admin/checkin");
   await expect(page).toHaveURL(/\/admin\/login/);
+  await page.getByLabel("Email", { exact: true }).fill(ADMIN_EMAIL);
   await page.getByLabel("Password").fill("password-salah");
   await page.getByRole("button", { name: "Masuk" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Password salah" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Email atau password salah" })).toBeVisible();
   await page.getByLabel("Password").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Masuk" }).click();
   await expect(page).toHaveURL(/\/admin\/checkin$/);
@@ -158,6 +160,7 @@ test("admin: sekarang dipanggil tampil di layar publik, batalkan tiket membebask
 
   // Login admin
   await page.goto("/admin");
+  await page.getByLabel("Email", { exact: true }).fill(ADMIN_EMAIL);
   await page.getByLabel("Password").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Masuk" }).click();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

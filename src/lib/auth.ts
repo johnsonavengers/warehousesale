@@ -1,5 +1,6 @@
 /**
- * Autentikasi admin sederhana: cookie httpOnly berisi hash dari ADMIN_PASSWORD.
+ * Satu akun admin dari ADMIN_EMAIL dan ADMIN_PASSWORD.
+ * Cookie httpOnly terikat ke email dan password sehingga perubahan keduanya membatalkan sesi lama.
  * Memakai Web Crypto agar bisa dipakai di middleware (Edge) maupun route handler (Node).
  */
 export const ADMIN_COOKIE = "admin_session";
@@ -12,11 +13,17 @@ async function sha256Hex(input: string): Promise<string> {
     .join("");
 }
 
-/** Token sesi yang valid, atau null jika ADMIN_PASSWORD belum di-set. */
+function adminCredentials() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  return email && password?.trim() ? { email, password } : null;
+}
+
+/** Token sesi yang valid, atau null jika akun admin belum dikonfigurasi. */
 export async function expectedAdminToken(): Promise<string | null> {
-  const pw = process.env.ADMIN_PASSWORD;
-  if (!pw) return null;
-  return sha256Hex(`tiket-antrian:admin:${pw}`);
+  const credentials = adminCredentials();
+  if (!credentials) return null;
+  return sha256Hex(`tiket-antrian:admin:v2:${JSON.stringify([credentials.email, credentials.password])}`);
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -31,8 +38,13 @@ export async function isValidAdminToken(token: string | undefined): Promise<bool
   return !!expected && !!token && safeEqual(token, expected);
 }
 
-export async function checkAdminPassword(password: string): Promise<boolean> {
-  const pw = process.env.ADMIN_PASSWORD;
-  if (!pw) return false;
-  return safeEqual(await sha256Hex(password), await sha256Hex(pw));
+export async function checkAdminCredentials(email: string, password: string): Promise<boolean> {
+  const credentials = adminCredentials();
+  if (!credentials) return false;
+  const emailMatches = safeEqual(
+    await sha256Hex(email.trim().toLowerCase()),
+    await sha256Hex(credentials.email),
+  );
+  const passwordMatches = safeEqual(await sha256Hex(password), await sha256Hex(credentials.password));
+  return emailMatches && passwordMatches;
 }

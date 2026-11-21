@@ -11,6 +11,7 @@ export default defineConfig({
     fileParallelism: false,
     env: {
       DATABASE_URL: "file:./test.db",
+      ADMIN_EMAIL: "admin@example.test",
       ADMIN_PASSWORD: "test-password",
       TEST_NOW: "",
     },

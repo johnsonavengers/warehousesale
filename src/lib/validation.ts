@@ -60,5 +60,10 @@ export const nowServingSchema = z.object({
 });
 
 export const loginSchema = z.object({
+  email: z
+    .string({ error: "Email wajib diisi" })
+    .trim()
+    .pipe(z.email("Format email tidak valid"))
+    .transform((value) => value.toLowerCase()),
   password: z.string({ error: "Password wajib diisi" }).min(1, "Password wajib diisi"),
 });

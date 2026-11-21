@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, ADMIN_COOKIE_MAX_AGE, checkAdminPassword, expectedAdminToken } from "@/lib/auth";
+import { ADMIN_COOKIE, ADMIN_COOKIE_MAX_AGE, checkAdminCredentials, expectedAdminToken } from "@/lib/auth";
 import { AppError, api } from "@/lib/errors";
 import { loginSchema } from "@/lib/validation";
 
 export const POST = api(async (req: Request) => {
-  const { password } = loginSchema.parse(await req.json());
+  const { email, password } = loginSchema.parse(await req.json());
   const token = await expectedAdminToken();
-  if (!token) throw new AppError(401, "ADMIN_PASSWORD belum di-set di server");
-  if (!(await checkAdminPassword(password))) throw new AppError(401, "Password salah");
+  if (!token) throw new AppError(401, "Akun admin belum dikonfigurasi di server");
+  if (!(await checkAdminCredentials(email, password))) throw new AppError(401, "Email atau password salah");
   const res = NextResponse.json({ ok: true });
   res.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,

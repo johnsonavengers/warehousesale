@@ -172,9 +172,9 @@ describe("proteksi admin (middleware)", () => {
   });
 
   it("login: password salah 401, password benar memberi cookie httpOnly", async () => {
-    const wrong = await login(jsonRequest("/api/admin/login", "POST", { password: "salah" }));
+    const wrong = await login(jsonRequest("/api/admin/login", "POST", { email: "admin@example.test", password: "salah" }));
     expect(wrong.status).toBe(401);
-    const ok = await login(jsonRequest("/api/admin/login", "POST", { password: "test-password" }));
+    const ok = await login(jsonRequest("/api/admin/login", "POST", { email: "admin@example.test", password: "test-password" }));
     expect(ok.status).toBe(200);
     const cookie = ok.headers.get("set-cookie") ?? "";
     expect(cookie).toContain(`${ADMIN_COOKIE}=`);
