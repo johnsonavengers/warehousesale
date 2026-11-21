@@ -1,11 +1,11 @@
 /**
  * SUMBER KEBENARAN JADWAL.
  * Ubah jadwal cukup di file ini, lalu jalankan ulang `npm run seed`.
- * Nomor antrian dihitung otomatis: sesi ke-i (0-based) → (i*30 + 1) s/d (i*30 + 30),
+ * Nomor antrian dihitung otomatis: sesi ke-i (0-based) → (i*50 + 1) s/d (i*50 + 50),
  * dan di-reset tiap tanggal.
  */
 export const EVENT_TZ = "Asia/Jakarta";
-export const SLOT_CAPACITY = 30;
+export const SLOT_CAPACITY = 50;
 
 export type TimeRange = { start: string; end: string };
 export type ScheduleDay = {

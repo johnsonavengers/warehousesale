@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { EVENT } from "@/config/event";
 import { SCHEDULE } from "@/config/schedule";
 import { Icon } from "@/components/Icon";
@@ -51,8 +51,8 @@ export default async function HomePage() {
         <aside className="card p-6 lg:sticky lg:top-28">
           <span className="mb-5 grid h-11 w-11 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary"><Icon name="ticket" /></span>
           <h3 className="text-lg font-semibold tracking-tight">Lebih simpel.<br />Tinggal datang.</h3>
-          <ol className="mt-6 space-y-5">{[["Pilih tanggal", "Tentukan hari yang pas untukmu."], ["Lengkapi data", "Isi nama dan nomor WhatsApp aktif."], ["Simpan tiketmu", "Sesi dan nomor otomatis tertera di tiket."]].map(([title, desc], i) => <li key={title} className="flex gap-3"><span className="mt-0.5 text-xs font-medium text-primary">0{i + 1}</span><div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs leading-relaxed text-stone-400">{desc}</p></div></li>)}</ol>
-          <div className="mt-6 border-t border-white/10 pt-5 text-xs leading-relaxed text-stone-400"><span className="text-white">Datang sesuai sesi di tiket.</span><br />Sesi ditentukan dari kuota yang tersedia. Satu nomor WhatsApp untuk satu tiket per tanggal.</div>
+          <ol className="mt-6 space-y-5">{[["Pilih tanggal", "Tentukan hari yang pas untukmu."], ["Lengkapi data", "Isi nama dan nomor WhatsApp aktif."], ["Simpan tiketmu", "Sesi dan nomor diacak otomatis, lalu tertera di tiket."]].map(([title, desc], i) => <li key={title} className="flex gap-3"><span className="mt-0.5 text-xs font-medium text-primary">0{i + 1}</span><div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs leading-relaxed text-stone-400">{desc}</p></div></li>)}</ol>
+          <div className="mt-6 border-t border-white/10 pt-5 text-xs leading-relaxed text-stone-400"><span className="text-white">Datang sesuai sesi di tiket.</span><br />Sesi dan nomor diacak dari kuota yang tersedia. Satu nomor WhatsApp untuk satu tiket per tanggal.</div>
         </aside>
       </div>
     </section>

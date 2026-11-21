@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { EVENT } from "@/config/event";

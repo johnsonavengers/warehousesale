@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { EVENT } from "@/config/event";
 import { Icon } from "./Icon";
 

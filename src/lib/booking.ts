@@ -7,6 +7,7 @@ import { BOOKING_RULES } from "@/config/event";
 import { SLOT_CAPACITY, getScheduleDay } from "@/config/schedule";
 import { AppError, SEAT_TAKEN_MESSAGE, isUniqueViolation } from "./errors";
 import { prisma } from "./prisma";
+import { pickRandomAvailableSlot } from "./random-slot";
 import { generateTicketCode, normalizeTicketCode } from "./ticket-code";
 import { eventDateTime, getNow, isBookingClosed, isDayPast, todayInEventTz } from "./time";
 
@@ -379,30 +380,32 @@ export async function createAutomaticTicket(
         const sessions = day.sessions.filter((s) =>
           !isBookingClosed(input.date, s.startTime, current, BOOKING_RULES.bookingCutoffMinutes));
         if (!sessions.length) throw new AppError(409, "Semua sesi pada tanggal ini sudah ditutup. Silakan pilih tanggal lain.");
-        const active = await tx.ticket.count({ where: { date: input.date, phone: input.phone } });
+        const booked = await tx.ticket.findMany({
+          where: { date: input.date }, select: { queueNumber: true, phone: true },
+        });
+        const active = booked.filter((ticket) => ticket.phone === input.phone).length;
         if (active >= BOOKING_RULES.maxActiveTicketsPerPhonePerDay) {
           throw new AppError(409, "Nomor WhatsApp ini sudah memiliki tiket untuk tanggal tersebut. Buka menu Cari tiket.");
         }
-        const booked = await tx.ticket.findMany({ where: { date: input.date }, select: { queueNumber: true } });
         // Hormati reservasi dari versi lama sampai kedaluwarsa.
         const holds = await tx.hold.findMany({
           where: { date: input.date, expiresAt: { gt: current } }, select: { queueNumber: true },
         });
         const taken = new Set([...booked, ...holds].map((t) => t.queueNumber));
-        for (const session of sessions) {
-          for (let number = session.queueStart; number <= session.queueEnd; number++) {
-            if (taken.has(number)) continue;
-            return tx.ticket.create({
-              data: {
-                date: input.date, sessionId: session.id, queueNumber: number,
-                code: generateTicketCode(input.date, number),
-                name: input.name, phone: input.phone, email: input.email ?? null,
-              },
-              include: ticketInclude,
-            });
-          }
-        }
-        throw new AppError(409, "Kuota tanggal ini sudah penuh. Silakan pilih tanggal lain.");
+        const slot = pickRandomAvailableSlot(sessions, taken);
+        if (!slot) throw new AppError(409, "Kuota tanggal ini sudah penuh. Silakan pilih tanggal lain.");
+        const ticket = await tx.ticket.create({
+          data: {
+            date: input.date,
+            ...slot,
+            code: generateTicketCode(input.date, slot.queueNumber),
+            name: input.name,
+            phone: input.phone,
+            email: input.email ?? null,
+          },
+        });
+        const session = sessions.find((s) => s.id === slot.sessionId)!;
+        return { ...ticket, session: { ...session, eventDay: day } };
       }, {
         maxWait: 15_000,
         timeout: 20_000,
@@ -618,7 +621,7 @@ export async function listTickets(filter: TicketFilter = {}): Promise<TicketView
   const views = tickets.map(toTicketView);
 
   // Pencarian dilakukan di sini (bukan di query) agar tidak peka huruf besar-kecil
-  // di SQLite maupun PostgreSQL. Jumlah tiket kecil (maks. 1620), jadi ringan.
+  // di SQLite maupun PostgreSQL. Jumlah tiket kecil (maks. 2700), jadi ringan.
   const q = filter.q?.trim().toLowerCase();
   if (!q) return views;
   const qPhone = q.replace(/[\s\-().]/g, "");

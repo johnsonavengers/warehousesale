@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { seed } from "../prisma/seed";
 import { BOOKING_RULES } from "@/config/event";
 import {
   cancelTicket,
@@ -48,25 +49,43 @@ describe("seed", () => {
       orderBy: { order: "asc" },
     });
     expect(fri.map((s) => [s.startTime, s.queueStart, s.queueEnd])).toEqual([
-      ["10:00", 1, 30],
-      ["10:45", 31, 60],
-      ["14:00", 61, 90],
-      ["14:45", 91, 120],
-      ["15:30", 121, 150],
-      ["16:15", 151, 180],
+      ["10:00", 1, 50],
+      ["10:45", 51, 100],
+      ["14:00", 101, 150],
+      ["14:45", 151, 200],
+      ["15:30", 201, 250],
+      ["16:15", 251, 300],
     ]);
     const sun = await prisma.session.findMany({
       where: { eventDay: { date: "2026-11-29" } },
       orderBy: { order: "asc" },
     });
     expect(sun.map((s) => [s.startTime, s.queueStart, s.queueEnd])).toEqual([
-      ["10:15", 1, 30],
-      ["11:00", 31, 60],
-      ["11:45", 61, 90],
-      ["14:00", 91, 120],
-      ["14:45", 121, 150],
-      ["15:30", 151, 180],
+      ["10:15", 1, 50],
+      ["11:00", 51, 100],
+      ["11:45", 101, 150],
+      ["14:00", 151, 200],
+      ["14:45", 201, 250],
+      ["15:30", 251, 300],
     ]);
+  });
+
+  it("penambahan kapasitas mempertahankan tiket yang sudah terbit", async () => {
+    const s = await sessionOf(FRI, 1);
+    const ticket = await book(s.id, 2, "081200009999");
+    await prisma.session.update({ where: { id: s.id }, data: { queueEnd: 30 } });
+    await seed();
+    expect((await sessionOf(FRI, 1)).queueEnd).toBe(50);
+    expect(await prisma.ticket.findUnique({ where: { id: ticket.id } })).toMatchObject({ code: ticket.code, queueNumber: 2, sessionId: s.id });
+  });
+
+  it("perubahan rentang yang merusak tiket lama dibatalkan secara atomik", async () => {
+    const s = await sessionOf(FRI, 2);
+    await prisma.session.update({ where: { id: s.id }, data: { queueStart: 31, queueEnd: 60 } });
+    const ticket = await book(s.id, 40, "081200008888");
+    await expect(seed()).rejects.toThrow(/tiket atau reservasi aktif/);
+    expect(await sessionOf(FRI, 2)).toMatchObject({ queueStart: 31, queueEnd: 60 });
+    expect(await prisma.ticket.findUnique({ where: { id: ticket.id } })).toMatchObject({ queueNumber: 40, sessionId: s.id });
   });
 
   it("seed idempoten (dijalankan ulang tidak menggandakan data)", async () => {
@@ -111,9 +130,9 @@ describe("daftar sesi & istirahat", () => {
     await book(s.id, 1, "081234567801");
     const days = await getDaysOverview(BEFORE_EVENT);
     expect(days.slice(0, 3).map((d) => [d.date, d.capacity, d.remaining, d.isPast])).toEqual([
-      [FRI, 180, 179, false],
-      [SAT, 180, 180, false],
-      ["2026-11-29", 180, 180, false],
+      [FRI, 300, 299, false],
+      [SAT, 300, 300, false],
+      ["2026-11-29", 300, 300, false],
     ]);
     const later = await getDaysOverview(wib(SAT, "09:00"));
     expect(later[0].isPast).toBe(true);
@@ -122,15 +141,15 @@ describe("daftar sesi & istirahat", () => {
 });
 
 describe("aturan bisnis pemesanan", () => {
-  it("nomor di luar rentang sesi ditolak (mis. nomor 45 pada sesi 61–90)", async () => {
+  it("nomor di luar rentang sesi ditolak (mis. nomor 45 pada sesi 101–150)", async () => {
     const s3 = await sessionOf(FRI, 3);
-    expect([s3.queueStart, s3.queueEnd]).toEqual([61, 90]);
+    expect([s3.queueStart, s3.queueEnd]).toEqual([101, 150]);
     const err = await expectAppError(
       createHold({ sessionId: s3.id, queueNumber: 45 }, BEFORE_EVENT),
       400,
     );
-    expect(err.message).toContain("61–90");
-    await expectAppError(createHold({ sessionId: s3.id, queueNumber: 91 }, BEFORE_EVENT), 400);
+    expect(err.message).toContain("101–150");
+    await expectAppError(createHold({ sessionId: s3.id, queueNumber: 151 }, BEFORE_EVENT), 400);
     expect(await prisma.hold.count()).toBe(0);
   });
 
@@ -186,12 +205,12 @@ describe("aturan bisnis pemesanan", () => {
 
   it("nomor yang sudah jadi tiket tidak bisa di-hold lagi (409) & tampil 'booked'", async () => {
     const s = await sessionOf(FRI, 2);
-    await book(s.id, 31, "081234567841");
-    await expectAppError(createHold({ sessionId: s.id, queueNumber: 31 }, BEFORE_EVENT), 409);
+    await book(s.id, 51, "081234567841");
+    await expectAppError(createHold({ sessionId: s.id, queueNumber: 51 }, BEFORE_EVENT), 409);
     const seats = (await getSeats(s.id, BEFORE_EVENT))!;
-    expect(seats.seats).toHaveLength(30);
-    expect(seats.seats[0]).toEqual({ number: 31, status: "booked" });
-    expect(seats.seats[29]).toEqual({ number: 60, status: "available" });
+    expect(seats.seats).toHaveLength(50);
+    expect(seats.seats[0]).toEqual({ number: 51, status: "booked" });
+    expect(seats.seats[49]).toEqual({ number: 100, status: "available" });
   });
 
   it("1 nomor HP maksimal 1 tiket aktif per hari", async () => {
@@ -250,7 +269,7 @@ describe("pembatalan & check-in", () => {
 
   it("check-in: valid → sudah check-in → tidak ditemukan", async () => {
     const s3 = await sessionOf(FRI, 3); // 14:00–14:45
-    const t = await book(s3.id, 61, "081234567881");
+    const t = await book(s3.id, 101, "081234567881");
     const during = wib(FRI, "13:50");
 
     const ok = await checkInByCode({ code: t.code.toLowerCase() }, during);
@@ -267,7 +286,7 @@ describe("pembatalan & check-in", () => {
 
   it("check-in: salah tanggal / salah sesi ditolak, bisa dipaksa", async () => {
     const s3 = await sessionOf(FRI, 3);
-    const t = await book(s3.id, 62, "081234567891");
+    const t = await book(s3.id, 102, "081234567891");
 
     const wrongDate = await expectAppError(checkInByCode({ code: t.code }, wib(SAT, "14:10")), 409);
     expect(wrongDate.extra?.result).toBe("wrong_date");
@@ -285,10 +304,10 @@ describe("pembatalan & check-in", () => {
 describe("sekarang dipanggil", () => {
   it("set, baca, dan kosongkan nomor yang dipanggil", async () => {
     expect((await getNowServing(FRI))!.number).toBeNull();
-    const v = await setNowServing(FRI, 95);
-    expect(v.number).toBe(95);
+    const v = await setNowServing(FRI, 155);
+    expect(v.number).toBe(155);
     expect(v.session).toMatchObject({ order: 4, startTime: "14:45" });
-    await expectAppError(setNowServing(FRI, 181), 400);
+    await expectAppError(setNowServing(FRI, 301), 400);
     await expectAppError(setNowServing("2026-12-01", 1), 404);
     expect((await setNowServing(FRI, 0)).number).toBeNull();
   });
@@ -297,7 +316,7 @@ describe("sekarang dipanggil", () => {
 describe("pencarian tiket di admin", () => {
   it("tidak peka huruf besar-kecil untuk nama & kode, dan menerima HP berspasi", async () => {
     const s = await sessionOf(FRI, 2);
-    const t = await book(s.id, 33, "081234567890");
+    const t = await book(s.id, 53, "081234567890");
     for (const q of ["Budi", "budi", "SANTOSO", "budi santoso", t.code.toLowerCase(), "0812 3456-7890"]) {
       const found = await listTickets({ q });
       expect(found.map((x) => x.code), `q=${q}`).toEqual([t.code]);

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { PageShell } from "@/components/SiteHeader";
 
 export default function NotFound() {

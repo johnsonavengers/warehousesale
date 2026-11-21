@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { SCHEDULE } from "@/config/schedule";
 import { TicketRowActions } from "@/components/admin/TicketRowActions";
 import { listTickets } from "@/lib/booking";

@@ -11,7 +11,7 @@ import { GET as exportCsv } from "@/app/api/admin/export/route";
 import { POST as login } from "@/app/api/admin/login/route";
 import { ADMIN_COOKIE, expectedAdminToken } from "@/lib/auth";
 import { middleware } from "@/middleware";
-import { jsonRequest, resetDb, sessionOf } from "./helpers";
+import { jsonRequest, resetDb } from "./helpers";
 
 const FRI = "2026-11-27";
 
@@ -25,9 +25,13 @@ describe("API pemesanan otomatis", () => {
     const responses = await Promise.all(Array.from({ length: 10 }, (_, i) => bookViaApi(FRI, `0812000001${String(i).padStart(2, "0")}`)));
     expect(responses.map((r) => r.status)).toEqual(Array(10).fill(201));
     const tickets = await Promise.all(responses.map((r) => r.json()));
-    expect(tickets.map((t) => t.queueNumber).sort((a, b) => a - b)).toEqual([1,2,3,4,5,6,7,8,9,10]);
+    expect(new Set(tickets.map((t) => t.queueNumber)).size).toBe(10);
     expect(new Set(tickets.map((t) => t.code)).size).toBe(10);
-    expect(tickets.every((t) => t.session.order === 1)).toBe(true);
+    for (const t of tickets) {
+      expect(t.queueNumber).toBeGreaterThanOrEqual(1);
+      expect(t.queueNumber).toBeLessThanOrEqual(300);
+      expect(t.session.order).toBe(Math.floor((t.queueNumber - 1) / 50) + 1);
+    }
   });
   it("request ulang bersamaan dengan WhatsApp sama hanya membuat satu tiket", async () => {
     const responses = await Promise.all(Array.from({ length: 5 }, () => bookViaApi(FRI, "081200000001")));
@@ -62,22 +66,21 @@ describe("API pemesanan otomatis", () => {
     const sessions = await (await getSessions(new Request("http://localhost/x"), { params: { date: FRI } })).json();
     expect(sessions.items).toHaveLength(7);
     expect(sessions.items[2]).toEqual({ type: "break", startTime: "11:30", endTime: "14:00" });
-    const s = await sessionOf(FRI, 1);
-    await bookViaApi(FRI, "081299998888");
-    const seats = await (await getSeatsRoute(new Request("http://localhost/x"), { params: { id: s.id } })).json();
-    expect(seats.seats.filter((x: { status: string }) => x.status === "booked")).toEqual([{ number: 1, status: "booked" }]);
+    const ticket = await (await bookViaApi(FRI, "081299998888")).json();
+    const seats = await (await getSeatsRoute(new Request("http://localhost/x"), { params: { id: ticket.session.id } })).json();
+    expect(seats.seats.filter((x: { status: string }) => x.status === "booked")).toEqual([{ number: ticket.queueNumber, status: "booked" }]);
     const found = await (await lookup(new Request("http://localhost/api/tickets/lookup?phone=%2B6281299998888"))).json();
     expect(found.tickets).toHaveLength(1);
     expect(found.tickets[0].phone).toBe("0812••••8888");
     expect((await lookup(new Request("http://localhost/api/tickets/lookup?phone=abc"))).status).toBe(400);
   });
   it("export CSV mencantumkan sesi dan nomor otomatis", async () => {
-    await bookViaApi(FRI, "081277776666");
+    const ticket = await (await bookViaApi(FRI, "081277776666")).json();
     const res = await exportCsv(new Request(`http://localhost/api/admin/export?date=${FRI}`));
     expect(res.headers.get("Content-Type")).toContain("text/csv");
     const lines = (await res.text()).replace(/^﻿/, "").trim().split("\r\n");
     expect(lines).toHaveLength(2);
-    expect(lines[1]).toMatch(/^JM-001-[A-Z2-9]{4},2026-11-27,1,10:00-10:45,1,Siti Aminah,'081277776666,,BOOKED,/);
+    expect(lines[1].split(",").slice(0, 9)).toEqual([ticket.code, FRI, String(ticket.session.order), `${ticket.session.startTime}-${ticket.session.endTime}`, String(ticket.queueNumber), "Siti Aminah", "'081277776666", "", "BOOKED"]);
   });
 });
 

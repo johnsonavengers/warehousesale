@@ -1,8 +1,8 @@
 # Johnson Warehouse Sale — tiket otomatis
 
-Pengunjung memilih tanggal → isi data → mendapat **e-tiket dengan sesi, nomor otomatis, dan QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **export CSV**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
+Pengunjung memilih tanggal → isi data → mendapat **e-tiket dengan sesi dan nomor acak otomatis, serta QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **export CSV**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
 
-Event: **27, 28, 29 November; 4, 5, 6 Desember; 11, 12, 13 Desember 2026**, zona waktu **Asia/Jakarta (WIB)**, 6 sesi × 30 nomor = 180 nomor/hari (1.620 tiket).
+Event: **27, 28, 29 November; 4, 5, 6 Desember; 11, 12, 13 Desember 2026**, zona waktu **Asia/Jakarta (WIB)**, 6 sesi × 50 nomor = 300 nomor/hari (2.700 tiket).
 
 ## Tech stack
 
@@ -53,21 +53,27 @@ Login admin memakai satu akun dari `ADMIN_EMAIL` dan `ADMIN_PASSWORD` pada konfi
 
 ## Mengubah jadwal, nama event, dan aturan
 
-- **Jadwal** — `src/config/schedule.ts` adalah satu-satunya sumber kebenaran. Edit, lalu `npm run seed`. Rentang nomor dihitung otomatis: sesi ke-i → `(i×30+1)`–`(i×30+30)`.
+- **Jadwal** — `src/config/schedule.ts` adalah satu-satunya sumber kebenaran. Edit, lalu `npm run seed`. Rentang nomor dihitung otomatis: sesi ke-i → `(i×50+1)`–`(i×50+50)`.
 - **Nama event, logo, warna** — `src/config/event.ts` (`EVENT`). Logo ditaruh di `public/`.
 - **Aturan pemesanan** — `BOOKING_RULES` di file yang sama: maks. tiket per nomor HP per hari, cut-off pemesanan, toleransi check-in lebih awal. Pengaturan hold hanya untuk kompatibilitas data lama.
 
 ## Aturan bisnis yang dijaga
 
 1. **Tanpa nomor ganda** — transaksi mengunci baris tanggal (`EventDay.bookingRevision`) sebelum membaca kuota dan membuat tiket. Unique constraint `(date, queueNumber)` menjadi pengaman tambahan. Bentrok transaksi/kode acak dicoba ulang terbatas. Tidak bergantung pada memori satu server.
-2. Nomor terkecil dari sesi paling awal yang belum dimulai dan masih tersedia dipilih otomatis. Sesi penuh dilewati. Nomor dimulai dari 1 setiap tanggal. Batas satu tiket aktif per WhatsApp per tanggal diperiksa dalam transaksi yang sama.
+2. Sistem memilih secara acak satu sesi yang belum dimulai dan masih memiliki kuota, lalu mengacak satu nomor kosong dalam sesi tersebut menggunakan `crypto.randomInt`. Sesi penuh dilewati. Setiap tanggal memiliki rentang nomor sendiri (1–300). Batas satu tiket aktif per WhatsApp per tanggal diperiksa dalam transaksi yang sama.
 3. Istirahat tidak punya sesi/nomor sehingga tidak bisa dipesan.
 4. Semua perhitungan waktu memakai Asia/Jakarta (`src/lib/time.ts`), bukan zona server.
 5. Kode tiket seperti `JM-027-X7K2`, tanpa karakter ambigu (0/O, 1/I/L).
 6. API hanya menerima tanggal, nama, WhatsApp, dan email opsional. Input `sessionId`, `queueNumber`, atau `holdId` ditolak. POST hold lama mengembalikan 410; reservasi lama tetap dihormati hingga kedaluwarsa.
 7. **Pembatalan** memindahkan tiket ke tabel arsip `CancelledTicket` lalu menghapus barisnya, sehingga nomor langsung bisa dipesan lagi dan unique constraint tetap konsisten.
 
-Migrasi hanya menambah kolom; seed menambahkan enam tanggal Desember melalui upsert tanpa menghapus tiket yang sudah ada. Jika koneksi putus setelah pemesanan, tiket dapat ditemukan lewat menu Cari tiket.
+Migrasi hanya menambah kolom; seed memperbarui jadwal melalui upsert tanpa menghapus tiket yang sudah ada. Perubahan dilakukan dalam transaksi per tanggal dan dibatalkan bila rentang baru tidak mencakup tiket yang sudah terbit. Jika koneksi putus setelah pemesanan, tiket dapat ditemukan lewat menu Cari tiket.
+
+## Respons perpindahan halaman
+
+- Link internal melakukan prefetch dan menampilkan respons langsung saat diklik. Loading boundary menjaga navigasi tetap responsif saat server sedang memuat data.
+- Halaman isi data memakai jadwal konfigurasi tanpa query database. Kuota terbaru tetap divalidasi dalam transaksi saat tombol Pesan tiket ditekan.
+- Pemesanan memakai data yang sudah dibaca dalam transaksi untuk menghindari pembacaan ulang tiket dan sesi. Tombol tetap terkunci hingga halaman tiket terbuka.
 
 ## Tes
 

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { NowServingControl } from "@/components/admin/NowServingControl";
 import { getDashboard, getNowServing } from "@/lib/booking";
 

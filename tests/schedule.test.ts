@@ -3,20 +3,20 @@ import { SCHEDULE, SLOT_CAPACITY, buildSeedData, queueRangeForSession } from "@/
 
 /** Tabel dari dokumen spesifikasi (bagian 2) — sumber pembanding. */
 const FRIDAY = [
-  ["10:00", "10:45", 1, 30],
-  ["10:45", "11:30", 31, 60],
-  ["14:00", "14:45", 61, 90],
-  ["14:45", "15:30", 91, 120],
-  ["15:30", "16:15", 121, 150],
-  ["16:15", "17:00", 151, 180],
+  ["10:00", "10:45", 1, 50],
+  ["10:45", "11:30", 51, 100],
+  ["14:00", "14:45", 101, 150],
+  ["14:45", "15:30", 151, 200],
+  ["15:30", "16:15", 201, 250],
+  ["16:15", "17:00", 251, 300],
 ] as const;
 const WEEKEND = [
-  ["10:15", "11:00", 1, 30],
-  ["11:00", "11:45", 31, 60],
-  ["11:45", "12:30", 61, 90],
-  ["14:00", "14:45", 91, 120],
-  ["14:45", "15:30", 121, 150],
-  ["15:30", "16:15", 151, 180],
+  ["10:15", "11:00", 1, 50],
+  ["11:00", "11:45", 51, 100],
+  ["11:45", "12:30", 101, 150],
+  ["14:00", "14:45", 151, 200],
+  ["14:45", "15:30", 201, 250],
+  ["15:30", "16:15", 251, 300],
 ] as const;
 const EXPECTED: Record<string, typeof FRIDAY | typeof WEEKEND> = {
   "2026-11-27": FRIDAY,
@@ -31,15 +31,15 @@ const EXPECTED: Record<string, typeof FRIDAY | typeof WEEKEND> = {
 };
 
 describe("konfigurasi jadwal", () => {
-  it("9 hari × 6 sesi = 54 sesi, 30 nomor per sesi, 1620 tiket", () => {
+  it("9 hari × 6 sesi = 54 sesi, 50 nomor per sesi, 2700 tiket", () => {
     const data = buildSeedData();
     expect(data).toHaveLength(9);
     expect(data.flatMap((d) => d.sessions)).toHaveLength(54);
-    expect(SLOT_CAPACITY).toBe(30);
+    expect(SLOT_CAPACITY).toBe(50);
     const total = data
       .flatMap((d) => d.sessions)
       .reduce((a, s) => a + (s.queueEnd - s.queueStart + 1), 0);
-    expect(total).toBe(1620);
+    expect(total).toBe(2700);
   });
 
   it.each(Object.keys(EXPECTED))("jam & rentang nomor %s cocok dengan tabel spesifikasi", (date) => {
@@ -51,10 +51,10 @@ describe("konfigurasi jadwal", () => {
     expect(day.sessions.map((s) => s.order)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  it("nomor antrian di-reset tiap tanggal (selalu mulai dari 1, berakhir di 180)", () => {
+  it("nomor antrian di-reset tiap tanggal (selalu mulai dari 1, berakhir di 300)", () => {
     for (const day of buildSeedData()) {
       expect(day.sessions[0].queueStart).toBe(1);
-      expect(day.sessions[5].queueEnd).toBe(180);
+      expect(day.sessions[5].queueEnd).toBe(300);
     }
   });
 
@@ -75,9 +75,9 @@ describe("konfigurasi jadwal", () => {
     }
   });
 
-  it("queueRangeForSession menghitung (i*30+1)..(i*30+30)", () => {
-    expect(queueRangeForSession(0)).toEqual({ queueStart: 1, queueEnd: 30 });
-    expect(queueRangeForSession(2)).toEqual({ queueStart: 61, queueEnd: 90 });
-    expect(queueRangeForSession(5)).toEqual({ queueStart: 151, queueEnd: 180 });
+  it("queueRangeForSession menghitung (i*50+1)..(i*50+50)", () => {
+    expect(queueRangeForSession(0)).toEqual({ queueStart: 1, queueEnd: 50 });
+    expect(queueRangeForSession(2)).toEqual({ queueStart: 101, queueEnd: 150 });
+    expect(queueRangeForSession(5)).toEqual({ queueStart: 251, queueEnd: 300 });
   });
 });

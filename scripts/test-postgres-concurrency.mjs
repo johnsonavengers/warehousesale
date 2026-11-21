@@ -42,10 +42,11 @@ try {
   const tickets = groups.flat();
   assert.equal(tickets.length, 32);
   assert(tickets.every((t) => t.status === 201));
-  assert.deepEqual(tickets.map((t) => t.number).sort((a, b) => a - b), Array.from({ length: 32 }, (_, i) => i + 1));
+  assert.equal(new Set(tickets.map((t) => t.number)).size, 32);
+  assert(tickets.every((t) => Number.isInteger(t.number) && t.number >= 1 && t.number <= 300));
   assert.equal(new Set(tickets.map((t) => t.code)).size, 32);
-  assert(tickets.filter((t) => t.number > 30).every((t) => t.session === 2));
-  console.log("LULUS: 32 nomor unik, sesi otomatis berganti setelah nomor 30.");
+  assert(tickets.every((t) => t.session === Math.floor((t.number - 1) / 50) + 1));
+  console.log("LULUS: 32 nomor acak unik, seluruh nomor sesuai rentang sesinya.");
   const duplicates = (await Promise.all(Array.from({ length: 4 }, () => worker("book", ["081288887777"])))).flat();
   assert.equal(duplicates.filter((t) => t.status === 201).length, 1);
   assert.equal(duplicates.filter((t) => t.status === 409).length, 3);

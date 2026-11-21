@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { NavLink as Link } from "@/components/NavLink";
 import { useState } from "react";
 
 type Result = {
