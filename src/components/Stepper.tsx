@@ -18,10 +18,10 @@ export function Stepper({ current }: { current: 0 | 1 | 2 | 3 | 4 }) {
                   className={
                     "grid h-7 w-7 place-items-center rounded-full text-xs font-bold " +
                     (active
-                      ? "bg-primary text-primary-fg"
+                      ? "bg-primary text-primary-fg shadow-[0_0_16px_rgb(var(--primary)/0.55)]"
                       : done
                         ? "bg-primary/25 text-primary"
-                        : "border border-line bg-panel text-stone-400")
+                        : "border border-white/15 bg-white/[0.06] text-stone-400")
                   }
                 >
                   {done ? "✓" : i + 1}

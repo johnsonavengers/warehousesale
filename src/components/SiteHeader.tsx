@@ -25,17 +25,20 @@ export function EventLogo({ size = 36 }: { size?: number }) {
 
 export function SiteHeader() {
   return (
-    <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-4">
-      <Link href="/" className="flex items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-        <EventLogo />
-        <span className="text-base font-bold tracking-tight">{EVENT.name}</span>
-      </Link>
-      <Link
-        href="/cari"
-        className="rounded-lg px-2 py-2 text-sm font-medium text-stone-300 underline-offset-4 hover:text-primary hover:underline"
-      >
-        Cari tiket saya
-      </Link>
+    <header className="glass-bar sticky top-0 z-30 border-b border-white/[0.07] pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        <Link
+          href="/"
+          className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <EventLogo />
+          <span className="text-[15px] font-bold leading-tight tracking-tight sm:text-base">{EVENT.name}</span>
+        </Link>
+        <Link href="/cari" className="btn-ghost shrink-0 px-3.5 text-[13px] sm:text-sm">
+          <span className="sm:hidden">Cari tiket</span>
+          <span className="hidden sm:inline">Cari tiket saya</span>
+        </Link>
+      </div>
     </header>
   );
 }
@@ -44,7 +47,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl px-4 pb-28">{children}</main>
+      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-6">{children}</main>
     </>
   );
 }

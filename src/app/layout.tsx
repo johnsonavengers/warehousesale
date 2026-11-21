@@ -20,7 +20,13 @@ export const metadata: Metadata = {
   description: EVENT.tagline,
 };
 
-export const viewport: Viewport = { themeColor: "#0d0b14", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  // Agar env(safe-area-inset-*) terisi di iPhone berponi / home indicator.
+  viewportFit: "cover",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const vars = {

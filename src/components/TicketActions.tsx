@@ -21,7 +21,7 @@ export function TicketActions({
     setError(null);
     try {
       const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: "#0d0b14" });
+      const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: "#000000" });
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = `tiket-${code}.png`;

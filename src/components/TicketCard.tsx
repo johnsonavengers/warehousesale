@@ -10,9 +10,9 @@ const STATUS_LABEL: Record<TicketView["status"], string> = {
 /** Kartu e-tiket bergaya tiket bioskop. `qrDataUrl` = QR berisi kode tiket. */
 export function TicketCard({ ticket, qrDataUrl }: { ticket: TicketView; qrDataUrl: string }) {
   return (
-    <div id="ticket-card" className="ticket shadow-2xl shadow-black/50" data-testid="ticket-card">
+    <div id="ticket-card" className="ticket" data-testid="ticket-card">
       <div className="ticket-edge" />
-      <div className="px-6 pb-4 pt-3">
+      <div className="ticket-main px-5 pb-5 pt-3 min-[400px]:px-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-stone-500">
@@ -67,9 +67,7 @@ export function TicketCard({ ticket, qrDataUrl }: { ticket: TicketView; qrDataUr
         </dl>
       </div>
 
-      <div className="ticket-tear" />
-
-      <div className="flex items-center gap-4 px-6 pb-3 pt-4">
+      <div className="ticket-stub flex items-center gap-4 px-5 pb-3 pt-4 min-[400px]:px-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={qrDataUrl}

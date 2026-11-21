@@ -28,7 +28,7 @@ export function AdminNav() {
             aria-current={active ? "page" : undefined}
             className={
               "rounded-lg px-3 py-2 font-medium " +
-              (active ? "bg-primary text-primary-fg" : "text-stone-300 hover:bg-line")
+              (active ? "bg-primary text-primary-fg" : "text-stone-300 hover:bg-white/10")
             }
           >
             {l.label}
@@ -38,7 +38,7 @@ export function AdminNav() {
       <button
         type="button"
         onClick={logout}
-        className="rounded-lg px-3 py-2 font-medium text-stone-400 hover:bg-line hover:text-stone-100"
+        className="rounded-lg px-3 py-2 font-medium text-stone-400 hover:bg-white/10 hover:text-stone-100"
       >
         Keluar
       </button>

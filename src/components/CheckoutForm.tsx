@@ -96,7 +96,7 @@ export function CheckoutForm({ hold, holdMinutes }: { hold: HoldView; holdMinute
           aria-live="off"
           className={
             "mt-4 flex items-center justify-between rounded-xl border px-4 py-3 " +
-            (urgent ? "border-red-400/50 bg-red-500/10 text-red-200" : "border-line bg-ink text-stone-200")
+            (urgent ? "border-red-400/50 bg-red-500/10 text-red-200" : "border-white/10 bg-black/40 text-stone-200")
           }
         >
           <span className="text-xs">Nomor dikunci untuk Anda selama {holdMinutes} menit</span>

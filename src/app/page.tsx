@@ -55,7 +55,7 @@ export default async function HomePage() {
                 <Link
                   href={`/${d.date}`}
                   data-testid={`day-${d.date}`}
-                  className="card block p-5 transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                  className="card block p-5 transition hover:border-primary hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                 >
                   {body}
                 </Link>

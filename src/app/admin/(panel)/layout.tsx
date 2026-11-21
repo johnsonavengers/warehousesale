@@ -7,7 +7,7 @@ export const metadata = { title: "Admin", robots: { index: false } };
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <header className="border-b border-line bg-panel/60">
+      <header className="glass-bar sticky top-0 z-30 border-b border-white/[0.07] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
           <div className="flex items-center gap-2.5">
             <EventLogo size={30} />

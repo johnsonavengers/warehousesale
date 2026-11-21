@@ -29,7 +29,7 @@ export default async function SessionsPage({ params }: { params: { date: string 
                 key={`break-${item.startTime}`}
                 data-testid="break"
                 aria-label={`Istirahat ${item.startTime} sampai ${item.endTime}, tidak bisa dipesan`}
-                className="flex items-center justify-between rounded-2xl border border-dashed border-line bg-stone-800/30 px-5 py-4 text-stone-400"
+                className="flex items-center justify-between rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-4 text-stone-500"
               >
                 <span className="font-mono text-sm">
                   {item.startTime} – {item.endTime}
@@ -83,7 +83,7 @@ export default async function SessionsPage({ params }: { params: { date: string 
               ) : (
                 <Link
                   href={`/${day.date}/${item.id}`}
-                  className="card flex items-center justify-between gap-3 px-5 py-4 transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                  className="card flex items-center justify-between gap-3 px-5 py-4 transition hover:border-primary hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                 >
                   {inner}
                 </Link>

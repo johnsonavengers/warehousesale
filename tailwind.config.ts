@@ -8,9 +8,10 @@ const config: Config = {
         // Warna utama diambil dari src/config/event.ts (lihat src/app/layout.tsx)
         primary: "rgb(var(--primary) / <alpha-value>)",
         "primary-fg": "rgb(var(--primary-fg) / <alpha-value>)",
-        ink: "#0d0b14",
-        panel: "#17141f",
-        line: "#2b2638",
+        ink: "#000000",
+        panel: "rgb(255 255 255 / 0.06)",
+        // Garis tipis transparan agar menyatu dengan panel kaca.
+        line: "rgb(255 255 255 / 0.1)",
         paper: "#fbf5e6",
       },
       fontFamily: {

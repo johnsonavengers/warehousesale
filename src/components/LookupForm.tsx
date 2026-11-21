@@ -77,7 +77,7 @@ export function LookupForm() {
             <li key={t.code}>
               <Link
                 href={`/ticket/${t.code}`}
-                className="card flex items-center gap-4 px-5 py-4 transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                className="card flex items-center gap-4 px-5 py-4 transition hover:border-primary hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <span className="queue-number text-4xl text-primary">{t.queueNumber}</span>
                 <span className="min-w-0 flex-1">

@@ -91,7 +91,7 @@ export function SeatPicker({ initial, pollMs }: Props) {
       <div
         role="group"
         aria-label={`Nomor antrian ${session.queueStart} sampai ${session.queueEnd}`}
-        className="mx-auto grid max-w-md grid-cols-6 gap-2"
+        className="mx-auto grid max-w-md grid-cols-5 gap-2 min-[360px]:grid-cols-6"
         data-testid="seat-grid"
       >
         {seats.map((seat) => {
@@ -114,10 +114,10 @@ export function SeatPicker({ initial, pollMs }: Props) {
                 "grid aspect-square min-h-[44px] min-w-[44px] place-items-center rounded-lg font-mono text-sm font-bold transition " +
                 "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary " +
                 (taken
-                  ? "cursor-not-allowed bg-stone-700/60 text-stone-500"
+                  ? "cursor-not-allowed border border-white/[0.04] bg-stone-700/25 text-stone-600"
                   : isSelected
-                    ? "scale-105 bg-primary text-primary-fg shadow-lg shadow-primary/30"
-                    : "border-2 border-stone-300 bg-white text-stone-900 hover:border-primary disabled:cursor-not-allowed disabled:opacity-50")
+                    ? "scale-105 bg-primary text-primary-fg shadow-[0_0_20px_rgb(var(--primary)/0.55)]"
+                    : "border border-white/25 bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.15)] hover:border-primary hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50")
               }
             >
               {seat.number}
@@ -129,13 +129,13 @@ export function SeatPicker({ initial, pollMs }: Props) {
       {/* Legenda */}
       <ul className="mx-auto mt-5 flex max-w-md items-center justify-center gap-5 text-xs text-stone-300" aria-label="Legenda warna">
         <li className="flex items-center gap-1.5">
-          <span className="h-4 w-4 rounded border-2 border-stone-300 bg-white" /> Tersedia
+          <span className="h-4 w-4 rounded border border-white/25 bg-white/[0.12]" /> Tersedia
         </li>
         <li className="flex items-center gap-1.5">
           <span className="h-4 w-4 rounded bg-primary" /> Dipilih
         </li>
         <li className="flex items-center gap-1.5">
-          <span className="h-4 w-4 rounded bg-stone-700/60" /> Terisi
+          <span className="h-4 w-4 rounded border border-white/[0.04] bg-stone-700/25" /> Terisi
         </li>
       </ul>
 
@@ -162,7 +162,7 @@ export function SeatPicker({ initial, pollMs }: Props) {
       )}
 
       {/* Bar bawah */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 backdrop-blur">
+      <div className="glass-bar fixed inset-x-0 bottom-0 z-30 border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3">
           <div aria-live="polite">
             <p className="text-xs text-stone-400">Nomor dipilih</p>

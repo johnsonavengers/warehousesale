@@ -2,7 +2,7 @@
  * Identitas event & aturan pemesanan. Ganti nama, logo, dan warna di sini.
  */
 export const EVENT = {
-  name: "Tiket Antrian",
+  name: "Johnson Warehouse Sale",
   tagline: "Pesan nomor antrian Anda, datang sesuai sesi.",
   venue: "Lokasi Event",
   /** Path logo di folder /public (mis. "/logo.png"). Kosongkan untuk memakai inisial. */
