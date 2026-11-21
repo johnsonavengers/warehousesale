@@ -1,6 +1,8 @@
 import { NavLink as Link } from "@/components/NavLink";
 import { SCHEDULE } from "@/config/schedule";
 import { TicketRowActions } from "@/components/admin/TicketRowActions";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { reportSearchParams } from "@/lib/registration-report";
 import { listTickets } from "@/lib/booking";
 import { formatEventDateTime } from "@/lib/time";
 
@@ -25,11 +27,7 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Daftar tiket</h1>
-        {date && (
-          <a href={`/api/admin/export?date=${date}`} className="btn-ghost" download>
-            Export CSV ({date})
-          </a>
-        )}
+        <ExportExcelButton href={`/api/admin/reports/export?${reportSearchParams({ date, sessionOrder, status: status ?? "ACTIVE", q })}`} className="btn-ghost" />
       </div>
 
       <form method="get" className="card mt-5 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_2fr_auto]">

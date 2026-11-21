@@ -1,16 +1,24 @@
 import { NavLink as Link } from "@/components/NavLink";
 import { NowServingControl } from "@/components/admin/NowServingControl";
-import { getDashboard, getNowServing } from "@/lib/booking";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { getDashboard, getNowServingForDays } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const days = await getDashboard();
-  const nowServing = await Promise.all(days.map((d) => getNowServing(d.date)));
+  const nowServing = await getNowServingForDays(days);
+  const total = days.reduce((sum, day) => ({ booked: sum.booked + day.totals.booked, checkedIn: sum.checkedIn + day.totals.checkedIn, remaining: sum.remaining + day.totals.remaining }), { booked: 0, checkedIn: 0, remaining: 0 });
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><p className="eyebrow mb-2">Johnson Warehouse Sale</p><h1 className="text-2xl font-bold tracking-tight">Dashboard</h1><p className="mt-2 text-sm text-stone-400">Pantau pendaftaran, kehadiran, dan kuota kunjungan.</p></div>
+        <div className="flex flex-wrap gap-2"><Link href="/admin/laporan" className="btn-ghost">Lihat laporan pendaftar</Link><ExportExcelButton href="/api/admin/reports/export?status=ACTIVE" /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[["Pendaftaran aktif", total.booked], ["Sudah check-in", total.checkedIn], ["Belum check-in", total.booked - total.checkedIn], ["Kuota tersisa", total.remaining]].map(([label, count]) => <div key={label} className="card p-5"><p className="text-xs text-stone-400">{label}</p><p className="mt-2 text-3xl font-semibold text-primary">{count}</p></div>)}
+      </div>
       {days.map((d, i) => (
         <section key={d.date} aria-labelledby={`day-${d.date}`} className="card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
@@ -27,9 +35,8 @@ export default async function AdminDashboardPage() {
               <Link href={`/admin/tickets?date=${d.date}`} className="btn-ghost">
                 Lihat tiket
               </Link>
-              <a href={`/api/admin/export?date=${d.date}`} className="btn-ghost" download>
-                Export CSV
-              </a>
+              <Link href={`/admin/laporan?date=${d.date}`} className="btn-ghost">Laporan</Link>
+              <ExportExcelButton href={`/api/admin/reports/export?date=${d.date}&status=ACTIVE`} className="btn-ghost" />
               <Link href={`/display/${d.date}`} target="_blank" className="btn-ghost">
                 Buka layar ↗
               </Link>

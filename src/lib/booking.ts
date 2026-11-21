@@ -629,6 +629,7 @@ export async function listTickets(filter: TicketFilter = {}): Promise<TicketView
     (t) =>
       t.name.toLowerCase().includes(q) ||
       t.code.toLowerCase().includes(q) ||
+      t.email?.toLowerCase().includes(q) ||
       (qPhone.length > 0 && t.phone.includes(qPhone)),
   );
 }
@@ -729,6 +730,21 @@ export async function getNowServing(date: string): Promise<NowServingView | null
     session: s ? { order: s.order, startTime: s.startTime, endTime: s.endTime } : null,
     maxNumber: day.sessions.length * SLOT_CAPACITY,
   };
+}
+
+/** Dashboard sudah memuat sesi; cukup satu query nomor panggilan untuk semua tanggal. */
+export async function getNowServingForDays(days: DashboardDay[]): Promise<NowServingView[]> {
+  const rows = await prisma.nowServing.findMany({ where: { date: { in: days.map((day) => day.date) } } });
+  return days.map((day) => {
+    const row = rows.find((item) => item.date === day.date);
+    const session = row ? day.sessions.find((s) => row.number >= s.queueStart && row.number <= s.queueEnd) : undefined;
+    return {
+      date: day.date, label: day.label, number: row?.number ?? null,
+      updatedAt: row?.updatedAt.toISOString() ?? null,
+      session: session ? { order: session.order, startTime: session.startTime, endTime: session.endTime } : null,
+      maxNumber: Math.max(0, ...day.sessions.map((s) => s.queueEnd)),
+    };
+  });
 }
 
 /** number = 0 → kosongkan. */

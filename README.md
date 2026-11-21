@@ -1,6 +1,6 @@
 # Johnson Warehouse Sale — tiket otomatis
 
-Pengunjung memilih tanggal → isi data → mendapat **e-tiket dengan sesi dan nomor acak otomatis, serta QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **export CSV**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
+Pengunjung memilih tanggal → isi data → mendapat **e-tiket dengan sesi dan nomor acak otomatis, serta QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **ekspor Excel (.xlsx)**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
 
 Event: **27, 28, 29 November; 4, 5, 6 Desember; 11, 12, 13 Desember 2026**, zona waktu **Asia/Jakarta (WIB)**, 6 sesi × 50 nomor = 300 nomor/hari (2.700 tiket).
 
@@ -40,16 +40,25 @@ Login admin memakai satu akun dari `ADMIN_EMAIL` dan `ADMIN_PASSWORD` pada konfi
 | `/` | Pilih tanggal (sisa kuota per hari; tanggal lewat nonaktif) |
 | `/[date]` | Link lama diarahkan ke formulir tanggal tersebut |
 | `/[date]/[sessionId]` | Link lama diarahkan ke formulir tanpa memilih sesi |
-| `/checkout?date=YYYY-MM-DD` | Isi data; sesi dan nomor dialokasikan saat konfirmasi |
+| `/checkout?date=YYYY-MM-DD` | Form langsung di bagian atas; sesi dan nomor dialokasikan saat konfirmasi |
 | `/ticket/[code]` | E-tiket + QR, simpan sebagai gambar, bagikan ke WhatsApp |
 | `/cari` | Cari tiket dengan nomor WhatsApp |
 | `/display/[date]` | Layar "Sekarang dipanggil" untuk TV di lokasi |
 
 | Admin (perlu login) | |
 |---|---|
-| `/admin` | Dashboard per tanggal & sesi (terisi / sisa / check-in), export CSV, set nomor dipanggil |
+| `/admin` | Ringkasan pendaftaran aktif, check-in, kuota, ekspor Excel, dan nomor dipanggil |
+| `/admin/laporan` | Data pendaftar, filter, riwayat pembatalan, dan ekspor Excel seluruh hasil filter |
 | `/admin/tickets` | Daftar tiket + filter & pencarian, check-in manual, batalkan |
 | `/admin/checkin` | Scan QR dengan kamera atau ketik kode. Kamera butuh HTTPS (atau `localhost`) |
+
+## Laporan pendaftar dan Excel
+
+Buka **Admin → Laporan pendaftar**. Filter tersedia untuk tanggal kunjungan, sesi, status, dan pencarian nama/WhatsApp/email/kode. Laporan mencakup tiket aktif serta arsip pembatalan, dengan ringkasan jumlah pendaftaran, pengunjung unik berdasarkan WhatsApp, dan status kehadiran.
+
+Tampilan dibatasi 50 baris per halaman agar tetap ringan. Tombol **Ekspor Excel** menghasilkan `.xlsx` dengan lembar **Pendaftar** dan **Ringkasan**, memuat seluruh hasil filter (bukan hanya halaman yang terlihat). WhatsApp disimpan sebagai teks agar nol di depan tidak hilang; input pendaftar tidak diterjemahkan menjadi formula. Waktu ditulis dalam WIB. Endpoint Excel memerlukan sesi admin dan memakai `private, no-store`. Ekspor CSV lama tetap tersedia untuk kompatibilitas.
+
+Di Dashboard dan Daftar tiket, ekspor memuat tiket aktif sesuai filter. Untuk menyertakan pembatalan, gunakan Laporan pendaftar dengan Semua status atau Dibatalkan.
 
 ## Mengubah jadwal, nama event, dan aturan
 

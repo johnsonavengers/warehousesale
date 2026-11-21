@@ -1,3 +1,4 @@
+import { Workbook } from "exceljs";
 import { expect, test, type Page } from "@playwright/test";
 
 const ADMIN_PASSWORD = "e2e-password";
@@ -31,6 +32,11 @@ test("tanggal → data → sesi & nomor otomatis → tiket → check-in admin", 
   expect(bounds!.height).toBeGreaterThanOrEqual(44);
   await day.click();
   await expect(page).toHaveURL(/\/checkout\?date=2026-11-27/);
+  await expect(page.getByLabel("Nama lengkap")).toBeInViewport();
+  const formBox = await page.getByRole("form", { name: "Form pendaftaran" }).boundingBox();
+  const summaryBox = await page.getByRole("region", { name: "Ringkasan pesanan" }).boundingBox();
+  if (testInfo.project.name.startsWith("mobile")) expect(formBox!.y + formBox!.height).toBeLessThan(summaryBox!.y);
+  else expect(formBox!.x).toBeLessThan(summaryBox!.x);
   await expect(page.getByText("Diacak otomatis", { exact: true })).toBeVisible();
   await expect(page.getByTestId("seat-grid")).toHaveCount(0);
   await expect(page.getByTestId("countdown")).toHaveCount(0);
@@ -106,12 +112,13 @@ test("link lama langsung ke data; tanggal tidak tersedia aman", async ({ page })
 });
 
 test("admin tetap dilindungi login", async ({ page, request }) => {
-  for (const path of ["/admin", "/admin/tickets", "/admin/checkin"]) {
+  for (const path of ["/admin", "/admin/tickets", "/admin/checkin", "/admin/laporan"]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/admin\/login/);
   }
   expect((await request.post("/api/admin/checkin", { data: { code: "JM-001-AAAA" } })).status()).toBe(401);
   expect((await request.get("/api/admin/export?date=2026-11-27")).status()).toBe(401);
+  expect((await request.get("/api/admin/reports/export")).status()).toBe(401);
 });
 
 test("admin memanggil antrian dan pembatalan membebaskan nomor otomatis", async ({ page, request }, testInfo) => {
@@ -164,4 +171,51 @@ test("klik tanggal langsung memberi respons meskipun jaringan lambat", async ({ 
   } finally {
     release();
   }
+});
+
+
+test("laporan admin: filter pendaftar, riwayat batal, ekspor Excel asli", async ({ page, request }, testInfo) => {
+  const suffix = testInfo.project.name === "mobile-320" ? "1" : testInfo.project.name === "mobile-390" ? "2" : "3";
+  const name = `Peserta Laporan ${testInfo.project.name}`;
+  const phone = `08128888000${suffix}`;
+  const registered = await (await request.post("/api/tickets", { data: { date: "2026-12-13", name, phone, email: "laporan@example.test" } })).json();
+  const cancelled = await (await request.post("/api/tickets", { data: { date: "2026-12-12", name: `Batal ${testInfo.project.name}`, phone: `08129999000${suffix}` } })).json();
+  await login(page);
+  expect((await page.request.patch(`/api/admin/tickets/${registered.id}`, { data: { status: "CHECKED_IN" } })).status()).toBe(200);
+  expect((await page.request.patch(`/api/admin/tickets/${cancelled.id}`, { data: { status: "CANCELLED" } })).status()).toBe(200);
+  await page.getByRole("link", { name: "Lihat laporan pendaftar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Laporan pendaftar" })).toBeVisible();
+  await page.getByLabel("Tanggal kunjungan", { exact: true }).selectOption("2026-12-13");
+  await page.getByLabel("Sesi", { exact: true }).selectOption(String(registered.session.order));
+  await page.getByLabel("Status pendaftaran").selectOption("CHECKED_IN");
+  await page.getByLabel("Cari pendaftar").fill(name);
+  await page.getByRole("button", { name: "Terapkan filter" }).click();
+  await expect(page).toHaveURL(/status=CHECKED_IN/);
+  await expect(page.getByText("Menampilkan 1–1 dari 1 pendaftaran", { exact: true })).toBeVisible();
+  const row = page.getByTestId(`${testInfo.project.name.startsWith("mobile") ? "report-card" : "report-row"}-${registered.code}`);
+  await expect(row).toContainText(name);
+  await expect(row).toContainText(phone);
+  await expect(row).toContainText("laporan@example.test");
+  await noOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("admin-report.png"), fullPage: true });
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Ekspor Excel", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("laporan-pendaftar-2026-12-13.xlsx");
+  const path = testInfo.outputPath("laporan.xlsx");
+  await download.saveAs(path);
+  const workbook = new Workbook();
+  await workbook.xlsx.readFile(path);
+  const sheet = workbook.getWorksheet("Pendaftar")!;
+  expect(sheet.rowCount).toBe(2);
+  expect(sheet.getCell("A2").value).toBe(registered.code);
+  expect(sheet.getCell("B2").value).toBe(name);
+  expect(sheet.getCell("C2").value).toBe(phone);
+  await page.getByRole("link", { name: "Reset filter", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/laporan$/);
+  await page.getByLabel("Status pendaftaran").selectOption("CANCELLED");
+  await page.getByLabel("Cari pendaftar").fill(`Batal ${testInfo.project.name}`);
+  await page.getByRole("button", { name: "Terapkan filter" }).click();
+  await expect(page.getByText("Menampilkan 1–1 dari 1 pendaftaran", { exact: true })).toBeVisible();
+  await expect(page.getByTestId(`${testInfo.project.name.startsWith("mobile") ? "report-card" : "report-row"}-${cancelled.code}`)).toContainText("Dibatalkan");
 });
