@@ -6,36 +6,70 @@
 import { isPostgresSchemaInSync, OUT_OF_SYNC_MESSAGE } from "./postgres-schema.mjs";
 
 const errors = [];
-const warnings = [];
+const target = process.env.VERCEL_ENV === "preview" ? "Preview" : "Production";
+const settings = `Vercel → project → Settings → Environment Variables (${target})`;
+
+function isPostgresUrl(value) {
+  // Sama dengan pemilihan provider/adapter pada prisma.config.ts dan src/lib/prisma.ts.
+  if (!/^postgres(ql)?:\/\//.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return /^postgres(ql)?:$/.test(url.protocol) && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+// Memudahkan pengecekan apakah deploy sudah memakai commit yang terbaru.
+const revision = process.env.VERCEL_GIT_COMMIT_SHA;
+if (revision) console.log(`Memeriksa konfigurasi ${target}, commit ${revision.slice(0, 7)}.`);
 
 const dbUrl = process.env.DATABASE_URL ?? "";
-if (!/^postgres(ql)?:\/\//.test(dbUrl)) {
+if (!dbUrl.trim()) {
   errors.push(
-    "DATABASE_URL belum berisi database PostgreSQL (harus diawali postgres:// atau postgresql://).\n" +
-      "  Di Vercel: tab Storage → buat/hubungkan database Neon ke project ini, lalu Redeploy.",
+    "DATABASE_URL belum tersedia untuk deployment ini.\n" +
+      "  Buka Storage pada project Vercel, hubungkan PostgreSQL (mis. Neon), lalu pastikan\n" +
+      `  DATABASE_URL tersedia di ${settings}.`,
+  );
+} else if (!isPostgresUrl(dbUrl)) {
+  errors.push(
+    "DATABASE_URL harus berupa URL koneksi PostgreSQL yang valid (postgres:// atau postgresql://).\n" +
+      "  file:./dev.db hanya untuk komputer lokal dan tidak bisa dipakai di Vercel.\n" +
+      `  Isi URL koneksi dari penyedia database di ${settings}.`,
+  );
+}
+
+// Harus sama dengan urutan pilihan koneksi migrasi di prisma.config.ts.
+const directKey = process.env.DATABASE_URL_UNPOOLED !== undefined
+  ? "DATABASE_URL_UNPOOLED"
+  : process.env.DIRECT_URL !== undefined ? "DIRECT_URL" : null;
+if (directKey && !isPostgresUrl(process.env[directKey])) {
+  errors.push(
+    `${directKey} harus berupa URL koneksi PostgreSQL yang valid.\n` +
+      "  Isi koneksi langsung dari penyedia database, atau hapus variabel opsional ini\n" +
+      "  agar migrasi memakai DATABASE_URL.",
   );
 }
 
 const pw = process.env.ADMIN_PASSWORD ?? "";
-if (!pw || pw === "ganti-password-ini") {
+if (!pw.trim() || pw.trim() === "ganti-password-ini") {
   errors.push(
     "ADMIN_PASSWORD belum di-set (atau masih contoh dari .env.example).\n" +
-      "  Di Vercel: Settings → Environment Variables → tambahkan ADMIN_PASSWORD.",
-  );
-}
-
-if (!process.env.NEXT_PUBLIC_BASE_URL) {
-  warnings.push(
-    "NEXT_PUBLIC_BASE_URL belum di-set; link tiket & tombol bagikan WhatsApp tidak akan berisi domain.\n" +
-      "  Isi dengan URL aplikasi, mis. https://warehousesale.vercel.app, lalu Redeploy.",
+      `  Tambahkan password admin pilihan Anda di ${settings}.`,
   );
 }
 
 if (!isPostgresSchemaInSync()) errors.push(OUT_OF_SYNC_MESSAGE);
 
-for (const w of warnings) console.warn(`PERINGATAN: ${w}`);
 if (errors.length > 0) {
   for (const e of errors) console.error(`ERROR: ${e}`);
+  console.error(
+    "Setelah menyimpan variabel, buat deployment baru dari commit terbaru.\n" +
+      "File .env lokal tidak otomatis dikirim ke Vercel. Lihat README bagian troubleshooting deploy.",
+  );
   process.exit(1);
 }
-console.log("Konfigurasi deploy OK.");
+if (!process.env.NEXT_PUBLIC_BASE_URL) {
+  console.log("NEXT_PUBLIC_BASE_URL opsional: link WhatsApp memakai alamat website yang sedang dibuka.");
+}
+console.log("Konfigurasi deploy OK. Koneksi database akan diperiksa saat migrasi.");

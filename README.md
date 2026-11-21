@@ -26,9 +26,9 @@ npm run dev                 # http://localhost:3000
 |---|---|
 | `DATABASE_URL` | `file:./dev.db` (SQLite) atau `postgresql://…` |
 | `ADMIN_PASSWORD` | Password login `/admin` |
-| `NEXT_PUBLIC_BASE_URL` | URL publik, dipakai untuk link tiket di tombol "Bagikan ke WhatsApp" |
+| `NEXT_PUBLIC_BASE_URL` | Opsional: domain tetap untuk link WhatsApp. Jika kosong, memakai alamat website yang sedang dibuka |
 
-**npm 12+ dan `allowScripts`.** npm 12 memblokir install script dependensi kecuali diizinkan di field `allowScripts` pada `package.json`. Yang diizinkan: `prisma`, `@prisma/engines`, `esbuild`, dan `better-sqlite3@12.11.1` (driver SQLite yang dipakai aplikasi, memakai binary siap pakai). `better-sqlite3@13.1.1` sengaja ditolak karena harus dikompilasi dari source dan hanya dipakai `scripts/db-init.ts`. Bila versi paket-paket ini berubah, jalankan `npm install-scripts ls` lalu perbarui daftarnya.
+**npm 12+ dan `allowScripts`.** npm 12 memblokir install script dependensi kecuali diizinkan di field `allowScripts` pada `package.json`. Yang diizinkan: `prisma`, `@prisma/engines`, `esbuild`, dan `better-sqlite3@12.11.1` (driver SQLite yang dipakai aplikasi). `better-sqlite3@13.1.1`, yang dipakai `scripts/db-init.ts`, sudah menyertakan binary untuk platform umum; langkah kompilasi implisitnya sengaja ditolak. Bila versi paket-paket ini berubah, jalankan `npm install-scripts ls` lalu perbarui daftarnya. Lihat [dokumentasi npm](https://docs.npmjs.com/cli/commands/npm-install-scripts/).
 
 ## Halaman
 
@@ -86,15 +86,27 @@ SQLite tidak bisa dipakai di Vercel (filesystem tidak permanen), jadi production
 > Jangan pakai fitur deploy dari Prisma (Prisma Compute): fitur itu mewajibkan Prisma ORM 8, sedangkan aplikasi ini memakai Prisma 7.
 
 1. Di [vercel.com](https://vercel.com): **Add New → Project**, import repo GitHub ini. Jangan klik Deploy dulu.
-2. Di project tersebut buka tab **Storage → Create Database → Neon (Postgres)**, lalu hubungkan ke project. Vercel otomatis mengisi `DATABASE_URL` (pooled) dan `DATABASE_URL_UNPOOLED` (untuk migrasi).
+2. Di project tersebut buka **Storage** dan periksa apakah database sudah terhubung. Jika belum, hubungkan PostgreSQL melalui [Vercel Marketplace](https://vercel.com/marketplace?category=databases&search=postgres), misalnya Neon. Setelah terhubung, periksa variabel `DATABASE_URL` di **Settings → Environment Variables**; pilih **Production** (dan **Preview** bila memakai preview). Jika integrasi memakai nama/prefix lain, salin nilai koneksinya ke `DATABASE_URL`. Jangan gunakan `file:./dev.db`. `DATABASE_URL_UNPOOLED` atau `DIRECT_URL` opsional untuk koneksi migrasi langsung; jangan isi kosong.
 3. **Settings → Environment Variables**, tambahkan:
-   - `ADMIN_PASSWORD`: password halaman `/admin`
-   - `NEXT_PUBLIC_BASE_URL`: URL aplikasi, mis. `https://warehousesale.vercel.app` (bisa diisi setelah tahu domainnya, lalu Redeploy)
-4. **Deploy** (atau **Redeploy**). `vercel.json` menjalankan `npm run vercel-build`, yang berisi:
+   - `ADMIN_PASSWORD`: password halaman `/admin` pilihan Anda, pada environment yang sama dengan database.
+   - `NEXT_PUBLIC_BASE_URL` **opsional**: URL publik sebenarnya. Jika belum tahu domainnya, biarkan tidak di-set; tombol WhatsApp otomatis memakai alamat website yang dibuka.
+   - `.env.production.example` berisi daftar variabel sebagai panduan. File `.env` di komputer sendiri tidak otomatis menjadi pengaturan Vercel.
+4. Buat **deployment baru dari commit terbaru** setelah menyimpan variabel. Periksa commit di bagian Source deployment; Redeploy terhadap deployment lama tetap memakai source commit lama. `vercel.json` menjalankan `npm run vercel-build`, yang berisi:
    1. `scripts/predeploy-check.mjs`: berhenti dengan pesan jelas bila `DATABASE_URL` bukan PostgreSQL atau `ADMIN_PASSWORD` kosong
    2. `prisma generate` + `prisma migrate deploy`: membuat/memperbarui tabel
    3. seed jadwal (aman diulang; perubahan di `src/config/schedule.ts` ikut terbawa tiap deploy, jadi jangan ubah rentang nomor sesi yang tiketnya sudah terjual)
    4. `next build`
+
+### Troubleshooting deploy
+
+| Pesan di log | Penyebab dan tindakan |
+|---|---|
+| `install scripts not yet covered by allowScripts` | Periksa commit Source deployment dan `package.json` yang dipakai. Daftar izin sudah ditambahkan pada commit `10e9bc9`. Jika log masih menyebut keenam paket yang sama, pastikan deployment memakai commit tersebut atau yang lebih baru dan Root Directory mengarah ke folder aplikasi. Untuk versi paket baru, tinjau dengan `npm install-scripts ls`. |
+| `Unknown env config "cache-dir"` | Peringatan konfigurasi npm; bukan penyebab penghentian oleh pemeriksaan deploy. Repo ini tidak mengatur `cache-dir`. Jika Anda menambahkan `npm_config_cache_dir` di environment Vercel, hapus atau gunakan `npm_config_cache`. |
+| `DATABASE_URL` kosong/tidak valid | Hubungkan database PostgreSQL dan pastikan variabel tersedia untuk environment deployment. SQLite lokal tidak cocok untuk penyimpanan di Vercel. |
+| `ADMIN_PASSWORD` kosong/contoh | Isi password admin di pengaturan environment Vercel. Jangan simpan password di Git. |
+
+`npm run deploy:check` memeriksa variabel environment proses dan kesesuaian schema tanpa mengubah database; perintah ini tidak memuat `.env` lokal. Kelulusan pemeriksaan belum membuktikan koneksi database: koneksi baru digunakan oleh langkah migrasi berikutnya. Perubahan variabel Vercel berlaku pada deployment baru, sesuai [dokumentasi Vercel](https://vercel.com/docs/environment-variables).
 
 ### Dua database: SQLite (lokal) dan PostgreSQL (production)
 

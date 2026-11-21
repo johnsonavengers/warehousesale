@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "deploy:check": "node scripts/predeploy-check.mjs",
     "vercel-build": "node scripts/predeploy-check.mjs && prisma generate && prisma migrate deploy && tsx prisma/seed.ts && next build",
     "db:pg-schema": "node scripts/postgres-schema.mjs",
     "start": "next start",
