@@ -5,9 +5,8 @@ import { loginSchema } from "@/lib/validation";
 
 export const POST = api(async (req: Request) => {
   const { email, password } = loginSchema.parse(await req.json());
-  const token = await expectedAdminToken();
-  if (!token) throw new AppError(401, "Akun admin belum dikonfigurasi di server");
-  if (!(await checkAdminCredentials(email, password))) throw new AppError(401, "Email atau password salah");
+  const token = await expectedAdminToken(email);
+  if (!token || !(await checkAdminCredentials(email, password))) throw new AppError(401, "Email atau password salah");
   const res = NextResponse.json({ ok: true });
   res.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,

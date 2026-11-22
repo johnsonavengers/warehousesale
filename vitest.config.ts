@@ -13,6 +13,7 @@ export default defineConfig({
       DATABASE_URL: "file:./test.db",
       ADMIN_EMAIL: "admin@example.test",
       ADMIN_PASSWORD: "test-password",
+      ADMIN_ACCOUNTS: "",
       TEST_NOW: "2026-11-20T09:00:00+07:00",
     },
   },

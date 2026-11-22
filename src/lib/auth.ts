@@ -1,8 +1,11 @@
 /**
- * Satu akun admin dari ADMIN_EMAIL dan ADMIN_PASSWORD.
- * Cookie httpOnly terikat ke email dan password sehingga perubahan keduanya membatalkan sesi lama.
+ * Akun utama dari ADMIN_EMAIL/ADMIN_PASSWORD; akun tambahan dari ADMIN_ACCOUNTS.
+ * Cookie httpOnly terikat ke masing-masing akun, sehingga perubahan satu akun
+ * membatalkan sesinya tanpa mengeluarkan admin lain.
  * Memakai Web Crypto agar bisa dipakai di middleware (Edge) maupun route handler (Node).
  */
+import { parseAdditionalAdmins } from "@/config/admin-accounts.mjs";
+
 export const ADMIN_COOKIE = "admin_session";
 export const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 12; // 12 jam
 
@@ -13,17 +16,28 @@ async function sha256Hex(input: string): Promise<string> {
     .join("");
 }
 
-function adminCredentials() {
+function adminCredentials(): { email: string; password: string }[] {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
-  return email && password?.trim() ? { email, password } : null;
+  const primary = email && password?.trim() ? [{ email, password }] : [];
+  try {
+    return [...primary, ...parseAdditionalAdmins(process.env.ADMIN_ACCOUNTS, email)];
+  } catch {
+    // Konfigurasi tambahan yang rusak tidak membuka akses atau menonaktifkan akun utama.
+    // Build production akan menolaknya melalui predeploy-check.
+    return primary;
+  }
 }
 
-/** Token sesi yang valid, atau null jika akun admin belum dikonfigurasi. */
-export async function expectedAdminToken(): Promise<string | null> {
-  const credentials = adminCredentials();
-  if (!credentials) return null;
+async function tokenFor(credentials: { email: string; password: string }): Promise<string> {
   return sha256Hex(`tiket-antrian:admin:v2:${JSON.stringify([credentials.email, credentials.password])}`);
+}
+
+/** Tanpa email, tetap mengembalikan token akun utama untuk kompatibilitas. */
+export async function expectedAdminToken(email = process.env.ADMIN_EMAIL ?? ""): Promise<string | null> {
+  const credentials = adminCredentials().find((account) => account.email === email.trim().toLowerCase());
+  if (!credentials) return null;
+  return tokenFor(credentials);
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -34,12 +48,13 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export async function isValidAdminToken(token: string | undefined): Promise<boolean> {
-  const expected = await expectedAdminToken();
-  return !!expected && !!token && safeEqual(token, expected);
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return false;
+  const expected = await Promise.all(adminCredentials().map(tokenFor));
+  return expected.some((value) => safeEqual(token, value));
 }
 
 export async function checkAdminCredentials(email: string, password: string): Promise<boolean> {
-  const credentials = adminCredentials();
+  const credentials = adminCredentials().find((account) => account.email === email.trim().toLowerCase());
   if (!credentials) return false;
   const emailMatches = safeEqual(
     await sha256Hex(email.trim().toLowerCase()),

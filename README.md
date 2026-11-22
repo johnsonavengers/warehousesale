@@ -26,14 +26,17 @@ npm run dev                 # http://localhost:3000
 |---|---|
 | `DATABASE_URL` | `file:./dev.db` (SQLite) atau `postgresql://…` |
 | `ADMIN_EMAIL` | Email akun admin untuk login `/admin` |
-| `ADMIN_PASSWORD` | Password login `/admin` |
+| `ADMIN_PASSWORD` | Password akun admin utama |
+| `ADMIN_ACCOUNTS` | Opsional: array JSON akun admin tambahan dengan email/password masing-masing |
 | `NEXT_PUBLIC_BASE_URL` | Opsional: domain tetap untuk link WhatsApp. Jika kosong, memakai alamat website yang sedang dibuka |
 
 **npm 12+ dan `allowScripts`.** npm 12 memblokir install script dependensi kecuali diizinkan di field `allowScripts` pada `package.json`. Yang diizinkan: `prisma`, `@prisma/engines`, `esbuild`, dan `better-sqlite3@12.11.1` (driver SQLite yang dipakai aplikasi). `better-sqlite3@13.1.1`, yang dipakai `scripts/db-init.ts`, sudah menyertakan binary untuk platform umum; langkah kompilasi implisitnya sengaja ditolak. Bila versi paket-paket ini berubah, jalankan `npm install-scripts ls` lalu perbarui daftarnya. Lihat [dokumentasi npm](https://docs.npmjs.com/cli/commands/npm-install-scripts/).
 
 ## Halaman
 
-Login admin memakai satu akun dari `ADMIN_EMAIL` dan `ADMIN_PASSWORD` pada konfigurasi server, tanpa tabel akun di database. Buka `/admin/login`, lalu masukkan keduanya. Email tidak peka huruf besar-kecil. Mengubah email atau password membatalkan sesi admin sebelumnya. Simpan kredensial lokal di `.env` yang diabaikan Git; untuk Vercel, atur keduanya pada Environment Variables dan buat deployment baru.
+Login admin memakai akun utama dari `ADMIN_EMAIL` dan `ADMIN_PASSWORD`, serta akun tambahan opsional dari `ADMIN_ACCOUNTS`, tanpa tabel akun di database. Semua akun mempunyai akses admin yang sama. Buka `/admin/login`, lalu masukkan email dan password. Email tidak peka huruf besar-kecil. Menghapus akun atau mengubah email/password membatalkan sesi akun tersebut; sesi admin lain tetap berlaku.
+
+Untuk menambah admin, isi `ADMIN_ACCOUNTS` dengan array JSON, misalnya `[{"email":"admin-kedua@example.com","password":"isi-password-pilihan"}]`. Akun utama tetap aktif tanpa perlu mengganti `ADMIN_EMAIL` atau `ADMIN_PASSWORD`. Email wajib unik, maksimal 20 akun tambahan dan ukuran konfigurasi 4 KB. Simpan kredensial lokal di `.env` yang diabaikan Git; untuk Vercel, tambahkan `ADMIN_ACCOUNTS` di Environment Variables (Production), lalu buat deployment baru. Jangan menambahkan awalan `NEXT_PUBLIC_` atau menyimpan kredensial di Git.
 
 | Publik | |
 |---|---|

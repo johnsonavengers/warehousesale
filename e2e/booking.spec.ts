@@ -11,13 +11,31 @@ function fixtureFor(project: string) {
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
-async function login(page: Page) {
+async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
   await page.goto("/admin");
-  await page.getByLabel("Email", { exact: true }).fill(ADMIN_EMAIL);
-  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Masuk" }).click();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
+
+test("admin tambahan dan admin utama bisa masuk serta mengakses laporan", async ({ page }) => {
+  await login(page);
+  const primaryCookie = (await page.context().cookies()).find((cookie) => cookie.name === "admin_session")!.value;
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await login(page, "second-admin@example.test", "second-e2e-password");
+  const secondCookie = (await page.context().cookies()).find((cookie) => cookie.name === "admin_session")!.value;
+  expect(secondCookie).not.toBe(primaryCookie);
+  await page.getByRole("link", { name: "Laporan pendaftar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Laporan pendaftar" })).toBeVisible();
+  const response = await page.request.get("/api/admin/reports/export");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("spreadsheetml.sheet");
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/login/);
+  expect((await page.request.get("/api/admin/reports/export")).status()).toBe(401);
+});
 
 test("tanggal → data → sesi & nomor otomatis → tiket → check-in admin", async ({ page }, testInfo) => {
   const fx = fixtureFor(testInfo.project.name);

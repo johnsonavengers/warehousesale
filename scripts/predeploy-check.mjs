@@ -5,6 +5,7 @@
  */
 import { isPostgresSchemaInSync, OUT_OF_SYNC_MESSAGE } from "./postgres-schema.mjs";
 import { z } from "zod";
+import { parseAdditionalAdmins } from "../src/config/admin-accounts.mjs";
 
 const errors = [];
 const target = process.env.VERCEL_ENV === "preview" ? "Preview" : "Production";
@@ -66,6 +67,12 @@ if (!pw.trim() || pw.trim() === "ganti-password-ini") {
     "ADMIN_PASSWORD belum di-set (atau masih contoh dari .env.example).\n" +
       `  Tambahkan password admin pilihan Anda di ${settings}.`,
   );
+}
+
+try {
+  parseAdditionalAdmins(process.env.ADMIN_ACCOUNTS, email);
+} catch (error) {
+  errors.push(`${error.message}\n  Periksa akun admin tambahan di ${settings}.`);
 }
 
 if (!isPostgresSchemaInSync()) errors.push(OUT_OF_SYNC_MESSAGE);

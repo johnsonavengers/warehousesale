@@ -91,4 +91,31 @@ describe("pemeriksaan konfigurasi deployment", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("ADMIN_EMAIL belum di-set atau format email tidak valid");
   });
+
+  it("menerima akun admin tambahan tanpa menulis kredensial ke log", () => {
+    const result = check({ DATABASE_URL: databaseUrl, ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: adminPassword,
+      ADMIN_ACCOUNTS: JSON.stringify([{ email: "second@example.test", password: "extra-private-password" }]),
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout + result.stderr).not.toContain("extra-private-password");
+    expect(result.stdout + result.stderr).not.toContain("second@example.test");
+  });
+
+  it.each([
+    "invalid-json",
+    JSON.stringify({ email: "second@example.test", password: "extra-private-password" }),
+    JSON.stringify([{ email: "not-an-email", password: "extra-private-password" }]),
+    JSON.stringify([{ email: "second@example.test", password: " " }]),
+    JSON.stringify([{ email: "second@example.test", password: "ganti-password-ini" }]),
+    JSON.stringify([{ email: " ADMIN@example.test ", password: "extra-private-password" }]),
+    JSON.stringify([{ email: "second@example.test", password: "extra-private-password" }, { email: " SECOND@example.test ", password: "different-password" }]),
+    JSON.stringify(Array.from({ length: 21 }, (_, i) => ({ email: `admin${i}@example.test`, password: "extra-private-password" }))),
+    JSON.stringify([{ email: "second@example.test", password: "x".repeat(4096) }]),
+  ])("menolak konfigurasi akun tambahan rusak tanpa membocorkan password", (config) => {
+    const result = check({ DATABASE_URL: databaseUrl, ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: adminPassword, ADMIN_ACCOUNTS: config });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("ADMIN_ACCOUNTS harus berupa array JSON");
+    expect(result.stdout + result.stderr).not.toContain("extra-private-password");
+    expect(result.stdout + result.stderr).not.toContain("second@example.test");
+  });
 });
