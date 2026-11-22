@@ -1,0 +1,8 @@
+import { listPosProducts } from "@/lib/pos";
+import { formatEventDateTime, getNow } from "@/lib/time";
+import { POS_STORE, rupiah } from "@/config/pos";
+import { PrintButton } from "@/components/pos/PrintButton";
+export default async function StockPrintPage() {
+  const products = await listPosProducts();
+  return <div className="space-y-5"><style>{"@media print { @page { size: A4 landscape; margin: 12mm; } }"}</style><div className="no-print flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold">Cetak laporan stok</h1><p className="mt-2 text-sm text-stone-400">Seluruh produk, termasuk produk nonaktif. Kertas A4 mendatar.</p></div><PrintButton label="Cetak laporan stok" /></div><div className="overflow-x-auto"><article className="pos-print-document pos-stock-report" data-testid="pos-stock-report"><h2>{POS_STORE.name}</h2><h3>Laporan stok barang</h3><p>Dicetak: {formatEventDateTime(getNow())}</p><table><thead><tr><th>SKU</th><th>Nama produk</th><th>Status</th><th>Stok</th><th>Harga jual</th><th>Nilai stok (harga jual)</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td>{product.sku}</td><td>{product.name}</td><td>{product.active ? "Aktif" : "Nonaktif"}</td><td className="numeric">{product.stock}</td><td className="numeric">{rupiah(product.price)}</td><td className="numeric">{rupiah(product.price * product.stock)}</td></tr>)}</tbody><tfoot><tr><th colSpan={3}>Total · {products.length} produk</th><th className="numeric">{products.reduce((sum, p) => sum + p.stock, 0)}</th><th /><th className="numeric">{rupiah(products.reduce((sum, p) => sum + p.stock * p.price, 0))}</th></tr></tfoot></table>{!products.length && <p>Belum ada produk.</p>}</article></div></div>;
+}

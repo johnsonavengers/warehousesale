@@ -63,6 +63,20 @@ Tampilan dibatasi 50 baris per halaman agar tetap ringan. Tombol **Ekspor Excel*
 
 Di Dashboard dan Daftar tiket, ekspor memuat tiket aktif sesuai filter. Untuk menyertakan pembatalan, gunakan Laporan pendaftar dengan Semua status atau Dibatalkan.
 
+## POS, stok, dan invoice
+
+Buka **Admin → POS** (`/admin/pos`). POS memakai tabel `PosProduct`, `PosSale`, `PosSaleItem`, dan `PosStockMovement` sendiri, tanpa relasi ke tiket/antrian. Semua admin yang sudah ada dapat menggunakannya. Tidak ada produk atau penjualan contoh yang dimasukkan ke production.
+
+- **Produk & stok**: tambah SKU, nama, harga jual rupiah bulat, dan stok awal. Gunakan Ubah stok dengan alasan untuk stok masuk/koreksi; perubahan tersimpan di riwayat stok. Produk bisa dinonaktifkan tanpa menghapus riwayat penjualannya.
+- **Kasir**: cari nama/SKU, tambahkan barang, isi diskon opsional, pilih Tunai/QRIS/Transfer/Debit, lalu simpan setelah pembayaran diterima. Metode pembayaran dicatat; aplikasi tidak memproses pembayaran melalui bank/gateway. Pembayaran tunai mendukung uang diterima dan kembalian.
+- **Transaksi**: cari invoice/pelanggan atau filter tanggal (WIB), lihat ringkasan penjualan, dan cetak ulang. Nama/SKU/harga barang serta kasir disimpan pada invoice sehingga perubahan produk berikutnya tidak mengubah transaksi lama.
+- **Cetak invoice**: format utama mengikuti contoh pengguna, 279 × 540 pt (**98,425 × 190,5 mm**), dengan pilihan A4. Gunakan skala 100%, matikan header/footer browser, dan pilih ukuran kertas yang sama pada driver printer. Struk panjang berlanjut ke halaman berikutnya. Rincian PPN tidak diaktifkan hanya berdasarkan contoh ukuran cetak.
+- **Cetak stok**: laporan seluruh produk pada A4 landscape; nilai stok ditampilkan berdasarkan harga jual, bukan harga modal.
+
+Checkout mengunci produk dalam urutan yang konsisten, memeriksa harga serta stok pada server, lalu menyimpan invoice, item, dan mutasi stok dalam satu transaksi. Stok tidak boleh negatif. Kunci request unik mencegah klik ulang/retry mengurangi stok dua kali. Request checkout yang belum dikonfirmasi disimpan sementara di sessionStorage untuk dicoba ulang dengan id yang sama. Riwayat transaksi dibatasi 50 per halaman, riwayat stok 100 perubahan terbaru per produk. Nominal maksimal Rp2 miliar per transaksi; maksimal 100 jenis barang, 10.000 unit/baris, serta stok per produk 1 juta unit.
+
+Migrasi `20261123000000_pos` hanya menambah empat tabel POS dan indeksnya. Seed jadwal tidak menambahkan/mengubah data POS. Identitas cetak POS dapat disesuaikan di `src/config/pos.ts`. Uji konkurensi PostgreSQL terisolasi: `npm run test:pos-postgres`.
+
 ## Mengubah jadwal, nama event, dan aturan
 
 - **Jadwal** — `src/config/schedule.ts` adalah satu-satunya sumber kebenaran. Edit, lalu `npm run seed`. Rentang nomor dihitung otomatis: sesi ke-i → `(i×50+1)`–`(i×50+50)`.

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/pos", label: "POS" },
   { href: "/admin/laporan", label: "Laporan pendaftar" },
   { href: "/admin/tickets", label: "Daftar tiket" },
   { href: "/admin/checkin", label: "Check-in" },
@@ -21,7 +22,7 @@ export function AdminNav() {
   return (
     <nav aria-label="Menu admin" className="flex flex-wrap items-center gap-1 text-sm">
       {LINKS.map((l) => {
-        const active = pathname === l.href;
+        const active = pathname === l.href || (l.href === "/admin/pos" && pathname.startsWith("/admin/pos/"));
         return (
           <Link
             key={l.href}

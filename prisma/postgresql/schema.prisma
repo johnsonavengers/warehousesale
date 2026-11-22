@@ -98,3 +98,72 @@ enum TicketStatus {
   CHECKED_IN
   CANCELLED
 }
+
+// POS berdiri sendiri: tidak memiliki relasi ke tiket, sesi, atau hari event.
+model PosProduct {
+  id        String @id @default(cuid())
+  sku       String @unique
+  name      String
+  price     Int
+  stock     Int @default(0)
+  active    Boolean @default(true)
+  revision  Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     PosSaleItem[]
+  movements PosStockMovement[]
+}
+
+model PosSale {
+  id            String @id @default(cuid())
+  invoiceNumber String @unique
+  requestKey    String @unique
+  requestHash   String
+  date          String
+  customerName  String?
+  paymentMethod String
+  subtotal      Int
+  discount      Int
+  total         Int
+  paid          Int
+  change        Int
+  cashierEmail  String
+  note          String?
+  createdAt     DateTime @default(now())
+  items         PosSaleItem[]
+  movements     PosStockMovement[]
+
+  @@index([date, createdAt])
+}
+
+model PosSaleItem {
+  id        String @id @default(cuid())
+  saleId    String
+  sale      PosSale @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  productId String
+  product   PosProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  sku       String
+  name      String
+  quantity  Int
+  unitPrice Int
+  lineTotal Int
+
+  @@index([saleId])
+}
+
+model PosStockMovement {
+  id           String @id @default(cuid())
+  productId    String
+  product      PosProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  saleId       String?
+  sale         PosSale? @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  requestKey   String? @unique
+  kind         String
+  quantity     Int
+  balance      Int
+  reason       String
+  cashierEmail String
+  createdAt    DateTime @default(now())
+
+  @@index([productId, createdAt])
+}

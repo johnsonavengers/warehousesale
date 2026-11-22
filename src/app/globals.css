@@ -55,3 +55,53 @@ body::before {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
   a.date-card:hover { transform: none; }
 }
+
+/* Cetak POS terpisah dari tampilan tiket. Ukuran mini mengikuti contoh pengguna. */
+.pos-print-document { background: #fff; color: #111; font-family: Arial, sans-serif; }
+.pos-receipt { width: 100%; max-width: 372px; margin: 0 auto; padding: 20px 34px 30px; font-size: 12px; line-height: 1.45; }
+.pos-receipt-a4 { max-width: 800px; padding: 32px; }
+.receipt-heading { text-align: center; margin-bottom: 22px; }
+.receipt-heading h2 { font-size: 21px; font-weight: 700; line-height: 1.15; }
+.receipt-heading p { margin-top: 5px; font-style: italic; }
+.receipt-payment { font-weight: 700; text-align: center; margin-bottom: 8px; }
+.receipt-cashier { overflow-wrap: anywhere; }
+.receipt-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin-top: 12px; }
+.receipt-meta span { font-size: 10px; }
+.receipt-number { font-weight: 700; overflow-wrap: anywhere; margin-top: 4px; }
+.receipt-customer { margin-top: 6px; overflow-wrap: anywhere; }
+.receipt-items { margin-top: 10px; border-top: 1px solid #777; }
+.receipt-item { padding: 8px 0; border-bottom: 1px solid #999; break-inside: avoid; overflow-wrap: anywhere; }
+.receipt-item small { display: block; margin-top: 2px; color: #444; font-size: 9px; }
+.receipt-item > div { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+.receipt-totals { margin-top: 10px; break-inside: avoid; }
+.receipt-totals > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.receipt-totals dd { text-align: right; }
+.receipt-grand { border-top: 1px solid #999; border-bottom: 1px solid #999; font-weight: 700; font-size: 14px; }
+.receipt-count { margin-top: 10px; font-size: 10px; }
+.receipt-note { margin-top: 10px; overflow-wrap: anywhere; }
+.receipt-footer { margin-top: 22px; text-align: center; font-size: 11px; break-inside: avoid; }
+.receipt-footer p + p { margin-top: 16px; font-size: 10px; }
+.pos-stock-report { min-width: 700px; padding: 28px; font-size: 12px; }
+.pos-stock-report h2 { font-size: 22px; font-weight: 700; }
+.pos-stock-report h3 { font-size: 16px; margin: 4px 0 8px; }
+.pos-stock-report table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+.pos-stock-report th, .pos-stock-report td { border: 1px solid #aaa; padding: 8px; text-align: left; overflow-wrap: anywhere; }
+.pos-stock-report th { background: #eee; font-weight: 700; }
+.pos-stock-report .numeric { text-align: right; white-space: nowrap; }
+@media print {
+  html:has(.pos-print-document) { color-scheme: light !important; background: #fff !important; }
+  body:has(.pos-print-document) { background: #fff !important; color: #000 !important; min-height: 0; }
+  body:has(.pos-print-document)::before, body:has(.pos-print-document) header.glass-bar, body:has(.pos-print-document) .no-print { display: none !important; }
+  body:has(.pos-print-document) main { max-width: none !important; width: auto !important; padding: 0 !important; margin: 0 !important; }
+  body:has(.pos-print-document) .space-y-5 > *, body:has(.pos-print-document) .space-y-6 > * { margin-top: 0 !important; }
+  body:has(.pos-print-document) .overflow-x-auto { overflow: visible !important; }
+  .pos-print-document { width: 100%; max-width: none; min-width: 0; padding: 0; margin: 0; box-shadow: none; }
+  .pos-receipt { font-size: 9pt; line-height: 1.35; }
+  .receipt-heading h2 { font-size: 15pt; }
+  .receipt-grand { font-size: 10pt; }
+  .receipt-meta span, .receipt-footer, .receipt-count { font-size: 8pt; }
+  .pos-stock-report { font-size: 9pt; }
+  .pos-stock-report thead { display: table-header-group; }
+  .pos-stock-report tr { break-inside: avoid; }
+  .pos-stock-report tfoot { display: table-row-group; }
+}

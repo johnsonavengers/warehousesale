@@ -53,6 +53,15 @@ export async function isValidAdminToken(token: string | undefined): Promise<bool
   return expected.some((value) => safeEqual(token, value));
 }
 
+/** Identitas kasir berasal dari sesi server, bukan dari input transaksi. */
+export async function adminEmailForToken(token: string | undefined): Promise<string | null> {
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
+  const accounts = adminCredentials();
+  const tokens = await Promise.all(accounts.map(tokenFor));
+  const index = tokens.findIndex((value) => safeEqual(token, value));
+  return index >= 0 ? accounts[index].email : null;
+}
+
 export async function checkAdminCredentials(email: string, password: string): Promise<boolean> {
   const credentials = adminCredentials().find((account) => account.email === email.trim().toLowerCase());
   if (!credentials) return false;

@@ -3,6 +3,10 @@ import { seed } from "../prisma/seed";
 
 /** Kosongkan data transaksi & pastikan jadwal ter-seed. */
 export async function resetDb() {
+  await prisma.posStockMovement.deleteMany();
+  await prisma.posSaleItem.deleteMany();
+  await prisma.posSale.deleteMany();
+  await prisma.posProduct.deleteMany();
   await prisma.hold.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.cancelledTicket.deleteMany();
