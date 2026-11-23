@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getRegistrationReport, parseReportFilter, summarizeRegistrations } from "@/lib/registration-report";
 import { buildRegistrationWorkbook } from "@/lib/report-excel";
 import { GET as exportExcel } from "@/app/api/admin/reports/export/route";
-import { resetDb, wib } from "./helpers";
+import { resetDb, wib, sessionOf } from "./helpers";
 
 const FRI = "2026-11-27";
 const SAT = "2026-11-28";
@@ -14,9 +14,9 @@ const now = wib("2026-11-21", "09:00");
 beforeEach(resetDb);
 
 async function fixtures() {
-  const checked = await createAutomaticTicket({ date: FRI, name: "=2+3", phone: "081234560001", email: "first@example.test" }, now);
-  const booked = await createAutomaticTicket({ date: SAT, name: "Siti Aminah", phone: "081234560001" }, now);
-  const cancelled = await createAutomaticTicket({ date: FRI, name: "Budi Batal", phone: "081234560002", email: "cancel@example.test" }, now);
+  const checked = await createAutomaticTicket({ date: FRI, sessionId: (await sessionOf(FRI, 3)).id, name: "=2+3", phone: "081234560001", email: "first@example.test" }, now);
+  const booked = await createAutomaticTicket({ date: SAT, sessionId: (await sessionOf(SAT, 3)).id, name: "Siti Aminah", phone: "081234560001" }, now);
+  const cancelled = await createAutomaticTicket({ date: FRI, sessionId: (await sessionOf(FRI, 3)).id, name: "Budi Batal", phone: "081234560002", email: "cancel@example.test" }, now);
   await updateTicketStatus(checked.id, "CHECKED_IN", wib(FRI, "14:05"));
   await prisma.ticket.update({ where: { id: checked.id }, data: { createdAt: new Date("2026-11-21T10:00:00Z") } });
   await cancelTicket(cancelled.id);

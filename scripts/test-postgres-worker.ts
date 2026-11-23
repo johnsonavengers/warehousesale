@@ -8,10 +8,11 @@ async function main() {
     throw new Error("Worker hanya boleh memakai schema sementara pengujian.");
   }
   if (process.argv[2] === "seed") return seed();
+  const session = await prisma.session.findFirstOrThrow({ where: { eventDay: { date: "2026-11-27" }, order: 3 } });
   const phones: string[] = JSON.parse(process.argv[3]);
   return Promise.all(phones.map(async (phone) => {
     try {
-      const ticket = await createAutomaticTicket({ date: "2026-11-27", name: "Uji konkurensi", phone });
+      const ticket = await createAutomaticTicket({ date: "2026-11-27", sessionId: session.id, name: "Uji konkurensi", phone });
       return { status: 201, number: ticket.queueNumber, code: ticket.code, session: ticket.session.order };
     } catch (error) {
       return { status: (error as { status?: number }).status ?? 500 };

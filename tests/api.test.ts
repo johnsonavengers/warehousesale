@@ -11,25 +11,26 @@ import { GET as exportCsv } from "@/app/api/admin/export/route";
 import { POST as login } from "@/app/api/admin/login/route";
 import { ADMIN_COOKIE, expectedAdminToken } from "@/lib/auth";
 import { middleware } from "@/middleware";
-import { jsonRequest, resetDb } from "./helpers";
+import { jsonRequest, resetDb, sessionOf } from "./helpers";
 
 const FRI = "2026-11-27";
 
 async function bookViaApi(date: string, phone: string, extra = {}) {
-  return postTicket(jsonRequest("/api/tickets", "POST", { date, name: "Siti Aminah", phone, ...extra }));
+  const session = await sessionOf(date === "2026-12-25" ? FRI : date, 3);
+  return postTicket(jsonRequest("/api/tickets", "POST", { date, sessionId: session.id, name: "Siti Aminah", phone, ...extra }));
 }
 beforeEach(resetDb);
 
-describe("API pemesanan otomatis", () => {
-  it("10 request bersamaan mendapat 10 nomor berbeda", async () => {
+describe("API pemesanan sesi pilihan", () => {
+  it("10 request bersamaan pada satu sesi mendapat 10 nomor berbeda", async () => {
     const responses = await Promise.all(Array.from({ length: 10 }, (_, i) => bookViaApi(FRI, `0812000001${String(i).padStart(2, "0")}`)));
     expect(responses.map((r) => r.status)).toEqual(Array(10).fill(201));
     const tickets = await Promise.all(responses.map((r) => r.json()));
     expect(new Set(tickets.map((t) => t.queueNumber)).size).toBe(10);
     expect(new Set(tickets.map((t) => t.code)).size).toBe(10);
     for (const t of tickets) {
-      expect(t.queueNumber).toBeGreaterThanOrEqual(1);
-      expect(t.queueNumber).toBeLessThanOrEqual(300);
+      expect(t.queueNumber).toBeGreaterThanOrEqual(101);
+      expect(t.queueNumber).toBeLessThanOrEqual(150);
       expect(t.session.order).toBe(Math.floor((t.queueNumber - 1) / 50) + 1);
     }
   });
@@ -38,9 +39,9 @@ describe("API pemesanan otomatis", () => {
     expect(responses.filter((r) => r.status === 201)).toHaveLength(1);
     expect(responses.filter((r) => r.status === 409)).toHaveLength(4);
   });
-  it("pemilihan nomor/sesi manual ditolak, API hold lama ditutup", async () => {
+  it("jam wajib dipilih, pemilihan nomor manual ditolak, API hold lama ditutup", async () => {
     expect((await postHold()).status).toBe(410);
-    for (const extra of [{ queueNumber: 18 }, { sessionId: "abc" }, { holdId: "abc" }]) {
+    for (const extra of [{ queueNumber: 18 }, { sessionId: "" }, { sessionId: undefined }, { holdId: "abc" }]) {
       expect((await bookViaApi(FRI, "081200000001", extra)).status).toBe(400);
     }
   });

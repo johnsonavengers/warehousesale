@@ -1,5 +1,5 @@
 import { Workbook } from "exceljs";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 
 const ADMIN_PASSWORD = "e2e-password";
 const ADMIN_EMAIL = "admin@example.test";
@@ -7,6 +7,12 @@ const dates = ["2026-11-27", "2026-11-28", "2026-11-29", "2026-12-04", "2026-12-
 function fixtureFor(project: string) {
   const i = project === "mobile-320" ? 1 : project === "mobile-390" ? 2 : 3;
   return { name: `Pengunjung ${project}`, phone: `08131111000${i}`, secondPhone: `08135555000${i}` };
+}
+async function selectedSession(request: APIRequestContext, date: string, order = 3): Promise<string> {
+  const response = await request.get(`/api/days/${date}/sessions`);
+  expect(response.status()).toBe(200);
+  const day = await response.json();
+  return day.items.find((s: { type: string; order?: number }) => s.type === "session" && s.order === order).id;
 }
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -37,8 +43,9 @@ test("admin tambahan dan admin utama bisa masuk serta mengakses laporan", async 
   expect((await page.request.get("/api/admin/reports/export")).status()).toBe(401);
 });
 
-test("tanggal → data → sesi & nomor otomatis → tiket → check-in admin", async ({ page }, testInfo) => {
+test("tanggal → pilih jam → data → nomor otomatis → tiket → check-in admin", async ({ page }, testInfo) => {
   const fx = fixtureFor(testInfo.project.name);
+  if (testInfo.project.name === "mobile-320") await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Pilih tanggal", exact: true })).toBeVisible();
   for (const date of dates) await expect(page.getByTestId(`day-${date}`)).toBeVisible();
@@ -49,13 +56,24 @@ test("tanggal → data → sesi & nomor otomatis → tiket → check-in admin", 
   expect(bounds!.width).toBeGreaterThanOrEqual(44);
   expect(bounds!.height).toBeGreaterThanOrEqual(44);
   await day.click();
-  await expect(page).toHaveURL(/\/checkout\?date=2026-11-27/);
+  await expect(page).toHaveURL(/\/2026-11-27$/);
+  await expect(page.getByRole("heading", { name: "Pilih jam kunjungan" })).toBeVisible();
+  await expect(page.getByTestId("session-1")).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByTestId("session-2")).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByTestId("session-3")).toContainText("14:00–14:45");
+  await expect(page.getByTestId("session-3")).toContainText("dari 50 tersisa");
+  const chosenSession = await selectedSession(page.request, "2026-11-27", 3);
+  await noOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("session-picker.png"), fullPage: true });
+  await page.getByTestId("session-3").click();
+  await expect(page).toHaveURL(/\/checkout\?date=2026-11-27&session=/);
+  await expect(page.getByTestId("checkout-time")).toHaveText("14:00–14:45 WIB · Sesi 3");
   await expect(page.getByLabel("Nama lengkap")).toBeInViewport();
   const formBox = await page.getByRole("form", { name: "Form pendaftaran" }).boundingBox();
   const summaryBox = await page.getByRole("region", { name: "Ringkasan pesanan" }).boundingBox();
   if (testInfo.project.name.startsWith("mobile")) expect(formBox!.y + formBox!.height).toBeLessThan(summaryBox!.y);
   else expect(formBox!.x).toBeLessThan(summaryBox!.x);
-  await expect(page.getByText("Diacak otomatis", { exact: true })).toBeVisible();
+  await expect(page.getByText("Nomor otomatis", { exact: true })).toBeVisible();
   await expect(page.getByTestId("seat-grid")).toHaveCount(0);
   await expect(page.getByTestId("countdown")).toHaveCount(0);
   await noOverflow(page);
@@ -68,9 +86,18 @@ test("tanggal → data → sesi & nomor otomatis → tiket → check-in admin", 
   const bookingResponse = page.waitForResponse((r) => r.url().endsWith("/api/tickets") && r.request().method() === "POST" && r.status() === 201);
   await page.getByRole("button", { name: "Pesan tiket" }).click();
   const assigned = await (await bookingResponse).json();
+  expect(assigned.session.id).toBe(chosenSession);
+  expect(assigned.session.startTime).toBe("14:00");
+  expect(assigned.session.endTime).toBe("14:45");
   await expect(page).toHaveURL(/\/ticket\/JM-\d{3}-[A-Z2-9]{4}/);
   await expect(page.getByTestId("ticket-number")).toHaveText(String(assigned.queueNumber));
   await expect(page.getByText(`Jam kunjungan · Sesi ${assigned.session.order}`)).toBeVisible();
+  await expect(page.getByTestId("ticket-time")).toHaveText(`${assigned.session.startTime}–${assigned.session.endTime} WIB`);
+  await expect(page.getByTestId("ticket-schedule")).toBeInViewport({ ratio: 1 });
+  const scheduleBounds = await page.getByTestId("ticket-schedule").boundingBox();
+  const numberBounds = await page.getByTestId("ticket-number").boundingBox();
+  expect(scheduleBounds!.y + scheduleBounds!.height).toBeLessThan(numberBounds!.y);
+  await page.screenshot({ path: testInfo.outputPath("ticket-first-screen.png") });
   await expect(page.getByTestId("ticket-name")).toHaveText(fx.name);
   await expect(page.getByTestId("ticket-status")).toHaveText("Terpesan");
   const qr = page.getByTestId("ticket-qr");
@@ -118,12 +145,17 @@ test("tanggal → data → sesi & nomor otomatis → tiket → check-in admin", 
   await expect(page.getByTestId("ticket-status")).toHaveText("Sudah check-in");
 });
 
-test("link lama langsung ke data; tanggal tidak tersedia aman", async ({ page }) => {
-  for (const path of ["/2026-11-28", "/2026-12-13/old-session"]) {
+test("link tanpa jam kembali ke pilihan sesi; sesi asing dan tanggal tidak tersedia aman", async ({ page }) => {
+  for (const path of ["/2026-11-28", "/2026-12-13/old-session", "/checkout?date=2026-11-27"]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/checkout\?date=/);
-    await expect(page.getByLabel("Nama lengkap")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pilih jam kunjungan" })).toBeVisible();
+    await expect(page.getByLabel("Nama lengkap")).toHaveCount(0);
   }
+  const sessionId = await selectedSession(page.request, "2026-11-28", 1);
+  await page.goto(`/2026-11-28/${sessionId}`);
+  await expect(page.getByTestId("checkout-time")).toHaveText("10:15–11:00 WIB · Sesi 1");
+  await page.goto(`/checkout?date=2026-11-27&session=${sessionId}`);
+  await expect(page.getByRole("heading", { name: "Pilih jam kunjungan" })).toBeVisible();
   await page.goto("/checkout?date=2026-12-25");
   await expect(page.getByText(/Tanggal belum dipilih/)).toBeVisible();
   await expect(page.getByLabel("Nama lengkap")).toHaveCount(0);
@@ -141,7 +173,7 @@ test("admin tetap dilindungi login", async ({ page, request }) => {
 
 test("admin memanggil antrian dan pembatalan membebaskan nomor otomatis", async ({ page, request }, testInfo) => {
   const fx = fixtureFor(testInfo.project.name);
-  const response = await request.post("/api/tickets", { data: { date: "2026-11-27", name: "Akan Dibatalkan", phone: fx.secondPhone } });
+  const response = await request.post("/api/tickets", { data: { date: "2026-11-27", sessionId: await selectedSession(request, "2026-11-27"), name: "Akan Dibatalkan", phone: fx.secondPhone } });
   expect(response.status()).toBe(201);
   const ticket = await response.json();
   await login(page);
@@ -155,7 +187,7 @@ test("admin memanggil antrian dan pembatalan membebaskan nomor otomatis", async 
   await expect(page.getByTestId(`row-${ticket.code}`)).toHaveCount(0);
   const seats = await (await request.get(`/api/sessions/${ticket.session.id}/seats`)).json();
   expect(seats.seats.find((s: { number: number }) => s.number === ticket.queueNumber).status).toBe("available");
-  const again = await request.post("/api/tickets", { data: { date: "2026-11-27", name: "Pesan kembali", phone: fx.secondPhone } });
+  const again = await request.post("/api/tickets", { data: { date: "2026-11-27", sessionId: await selectedSession(request, "2026-11-27"), name: "Pesan kembali", phone: fx.secondPhone } });
   expect(again.status()).toBe(201);
   const replacement = await again.json();
   expect(replacement.queueNumber).toBeGreaterThanOrEqual(101);
@@ -171,7 +203,7 @@ test("admin memanggil antrian dan pembatalan membebaskan nomor otomatis", async 
 test("klik tanggal langsung memberi respons meskipun jaringan lambat", async ({ page }, testInfo) => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
-  await page.route("**/checkout**", async (route) => {
+  await page.route("**/2026-12-13*", async (route) => {
     await gate;
     await route.continue();
   });
@@ -184,8 +216,9 @@ test("klik tanggal langsung memberi respons meskipun jaringan lambat", async ({ 
     const elapsed = Date.now() - started;
     await testInfo.attach("navigation-feedback-ms", { body: String(elapsed), contentType: "text/plain" });
     release();
-    await expect(page.getByLabel("Nama lengkap")).toBeVisible();
-    await expect(page.getByRole("link", { name: /Pilih sesi|Pilih nomor/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Pilih jam kunjungan" })).toBeVisible();
+    await expect(page.getByTestId("session-1")).toBeVisible();
+    await expect(page.getByTestId("seat-grid")).toHaveCount(0);
   } finally {
     release();
   }
@@ -196,8 +229,8 @@ test("laporan admin: filter pendaftar, riwayat batal, ekspor Excel asli", async 
   const suffix = testInfo.project.name === "mobile-320" ? "1" : testInfo.project.name === "mobile-390" ? "2" : "3";
   const name = `Peserta Laporan ${testInfo.project.name}`;
   const phone = `08128888000${suffix}`;
-  const registered = await (await request.post("/api/tickets", { data: { date: "2026-12-13", name, phone, email: "laporan@example.test" } })).json();
-  const cancelled = await (await request.post("/api/tickets", { data: { date: "2026-12-12", name: `Batal ${testInfo.project.name}`, phone: `08129999000${suffix}` } })).json();
+  const registered = await (await request.post("/api/tickets", { data: { date: "2026-12-13", sessionId: await selectedSession(request, "2026-12-13"), name, phone, email: "laporan@example.test" } })).json();
+  const cancelled = await (await request.post("/api/tickets", { data: { date: "2026-12-12", sessionId: await selectedSession(request, "2026-12-12"), name: `Batal ${testInfo.project.name}`, phone: `08129999000${suffix}` } })).json();
   await login(page);
   expect((await page.request.patch(`/api/admin/tickets/${registered.id}`, { data: { status: "CHECKED_IN" } })).status()).toBe(200);
   expect((await page.request.patch(`/api/admin/tickets/${cancelled.id}`, { data: { status: "CANCELLED" } })).status()).toBe(200);

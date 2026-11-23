@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { createPosProduct, updatePosProduct, adjustPosStock, createPosSale, getPosSale, getPosSales } from "@/lib/pos";
 import { createAutomaticTicket } from "@/lib/booking";
-import { resetDb } from "./helpers";
+import { resetDb, sessionOf } from "./helpers";
 import { ADMIN_COOKIE, expectedAdminToken } from "@/lib/auth";
 import { POST as productPost, GET as productGet } from "@/app/api/admin/pos/products/route";
 import { PATCH as productPatch } from "@/app/api/admin/pos/products/[id]/route";
@@ -45,7 +45,7 @@ describe("produk dan stok POS", () => {
 });
 describe("penjualan POS", () => {
   it("menyimpan total, diskon, kembalian, snapshot barang dan kasir tanpa mengubah tiket", async () => {
-    const ticket = await createAutomaticTicket({ date: "2026-11-27", name: "Pengunjung tetap", phone: "081234567890" });
+    const ticket = await createAutomaticTicket({ date: "2026-11-27", sessionId: (await sessionOf("2026-11-27", 3)).id, name: "Pengunjung tetap", phone: "081234567890" });
     const row = await product();
     const invoice = await createPosSale(sale(row.id, { customerName: "Budi", note: "Dibawa pulang" }), cashier);
     expect(invoice).toMatchObject({ subtotal: 70_000, discount: 5_000, total: 65_000, paid: 100_000, change: 35_000, cashierEmail: cashier });

@@ -358,7 +358,7 @@ const HOLD_EXPIRED_MESSAGE =
 
 /** Lock baris tanggal sebelum membaca kuota: aman antar instance/server Vercel. */
 export async function createAutomaticTicket(
-  input: { date: string; name: string; phone: string; email?: string | null },
+  input: { date: string; sessionId: string; name: string; phone: string; email?: string | null },
   now?: Date,
 ): Promise<TicketView> {
   if (!getScheduleDay(input.date)) throw new AppError(404, "Tanggal tidak tersedia.");
@@ -377,9 +377,11 @@ export async function createAutomaticTicket(
           where: { date: input.date },
           include: { sessions: { orderBy: { order: "asc" } } },
         });
-        const sessions = day.sessions.filter((s) =>
-          !isBookingClosed(input.date, s.startTime, current, BOOKING_RULES.bookingCutoffMinutes));
-        if (!sessions.length) throw new AppError(409, "Semua sesi pada tanggal ini sudah ditutup. Silakan pilih tanggal lain.");
+        const session = day.sessions.find((s) => s.id === input.sessionId);
+        if (!session) throw new AppError(404, "Jam yang dipilih tidak tersedia pada tanggal ini. Pilih kembali jam kunjungan.");
+        if (isBookingClosed(input.date, session.startTime, current, BOOKING_RULES.bookingCutoffMinutes)) {
+          throw new AppError(409, "Jam yang dipilih sudah ditutup. Silakan pilih jam lain.");
+        }
         const booked = await tx.ticket.findMany({
           where: { date: input.date }, select: { queueNumber: true, phone: true },
         });
@@ -392,8 +394,8 @@ export async function createAutomaticTicket(
           where: { date: input.date, expiresAt: { gt: current } }, select: { queueNumber: true },
         });
         const taken = new Set([...booked, ...holds].map((t) => t.queueNumber));
-        const slot = pickRandomAvailableSlot(sessions, taken);
-        if (!slot) throw new AppError(409, "Kuota tanggal ini sudah penuh. Silakan pilih tanggal lain.");
+        const slot = pickRandomAvailableSlot([session], taken);
+        if (!slot) throw new AppError(409, "Kuota jam yang dipilih sudah penuh. Silakan pilih jam lain.");
         const ticket = await tx.ticket.create({
           data: {
             date: input.date,
@@ -404,7 +406,6 @@ export async function createAutomaticTicket(
             email: input.email ?? null,
           },
         });
-        const session = sessions.find((s) => s.id === slot.sessionId)!;
         return { ...ticket, session: { ...session, eventDay: day } };
       }, {
         maxWait: 15_000,

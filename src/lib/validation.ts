@@ -44,7 +44,7 @@ export const createTicketSchema = z.object({
 
 export const automaticTicketSchema = createTicketSchema
   .omit({ holdId: true })
-  .extend({ date: dateSchema })
+  .extend({ date: dateSchema, sessionId: z.string({ error: "Pilih jam kunjungan terlebih dahulu." }).trim().min(1, "Pilih jam kunjungan terlebih dahulu.").max(100) })
   .strict();
 
 export const checkinSchema = z.object({

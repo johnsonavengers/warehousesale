@@ -1,6 +1,6 @@
 # Johnson Warehouse Sale — tiket otomatis
 
-Pengunjung memilih tanggal → isi data → mendapat **e-tiket dengan sesi dan nomor acak otomatis, serta QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **ekspor Excel (.xlsx)**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
+Pengunjung memilih tanggal → memilih jam sesi → isi data → mendapat **e-tiket dengan jam sesuai pilihan, nomor antrian otomatis, serta QR code**. Admin melihat pemesanan, **check-in dengan scan QR**, **ekspor Excel (.xlsx)**, dan mengatur nomor yang **sekarang dipanggil**. Tampilan panel kaca menggunakan latar hitam, teks putih/kuning, fokus keyboard, reduced motion, dan safe area ponsel.
 
 Event: **27, 28, 29 November; 4, 5, 6 Desember; 11, 12, 13 Desember 2026**, zona waktu **Asia/Jakarta (WIB)**, 6 sesi × 50 nomor = 300 nomor/hari (2.700 tiket).
 
@@ -41,9 +41,9 @@ Untuk menambah admin, isi `ADMIN_ACCOUNTS` dengan array JSON, misalnya `[{"email
 | Publik | |
 |---|---|
 | `/` | Pilih tanggal (sisa kuota per hari; tanggal lewat nonaktif) |
-| `/[date]` | Link lama diarahkan ke formulir tanggal tersebut |
-| `/[date]/[sessionId]` | Link lama diarahkan ke formulir tanpa memilih sesi |
-| `/checkout?date=YYYY-MM-DD` | Form langsung di bagian atas; sesi dan nomor dialokasikan saat konfirmasi |
+| `/[date]` | Pilih jam sesi dengan sisa kuota; sesi penuh/sudah mulai dinonaktifkan |
+| `/[date]/[sessionId]` | Link lama diteruskan ke formulir sesi tersebut bila masih tersedia |
+| `/checkout?date=YYYY-MM-DD&session=ID` | Form di bagian atas dengan tanggal/jam pilihan; nomor otomatis saat konfirmasi |
 | `/ticket/[code]` | E-tiket + QR, simpan sebagai gambar, bagikan ke WhatsApp |
 | `/cari` | Cari tiket dengan nomor WhatsApp |
 | `/display/[date]` | Layar "Sekarang dipanggil" untuk TV di lokasi |
@@ -86,11 +86,11 @@ Migrasi `20261123000000_pos` hanya menambah empat tabel POS dan indeksnya. Seed 
 ## Aturan bisnis yang dijaga
 
 1. **Tanpa nomor ganda** — transaksi mengunci baris tanggal (`EventDay.bookingRevision`) sebelum membaca kuota dan membuat tiket. Unique constraint `(date, queueNumber)` menjadi pengaman tambahan. Bentrok transaksi/kode acak dicoba ulang terbatas. Tidak bergantung pada memori satu server.
-2. Sistem memilih secara acak satu sesi yang belum dimulai dan masih memiliki kuota, lalu mengacak satu nomor kosong dalam sesi tersebut menggunakan `crypto.randomInt`. Sesi penuh dilewati. Setiap tanggal memiliki rentang nomor sendiri (1–300). Batas satu tiket aktif per WhatsApp per tanggal diperiksa dalam transaksi yang sama.
+2. Pengunjung wajib memilih sesi pada tanggal yang sesuai. Server memeriksa sesi belum dimulai dan masih memiliki kuota, lalu mengacak satu nomor kosong hanya dalam sesi pilihan menggunakan `crypto.randomInt`. Jika sesi penuh/ditutup, pemesanan ditolak dengan pesan untuk memilih jam lain; sistem tidak memindahkan pengunjung ke sesi lain. Setiap tanggal memiliki rentang nomor sendiri (1–300). Batas satu tiket aktif per WhatsApp per tanggal diperiksa dalam transaksi yang sama.
 3. Istirahat tidak punya sesi/nomor sehingga tidak bisa dipesan.
 4. Semua perhitungan waktu memakai Asia/Jakarta (`src/lib/time.ts`), bukan zona server.
 5. Kode tiket seperti `JM-027-X7K2`, tanpa karakter ambigu (0/O, 1/I/L).
-6. API hanya menerima tanggal, nama, WhatsApp, dan email opsional. Input `sessionId`, `queueNumber`, atau `holdId` ditolak. POST hold lama mengembalikan 410; reservasi lama tetap dihormati hingga kedaluwarsa.
+6. API mewajibkan tanggal, `sessionId`, nama, WhatsApp, dan menerima email opsional. Input `queueNumber` atau `holdId` ditolak. Form lama tanpa pilihan jam diarahkan ke halaman sesi. Tiket lama tetap mempertahankan sesi dan nomor yang telah diterbitkan. POST hold lama mengembalikan 410; reservasi lama tetap dihormati hingga kedaluwarsa.
 7. **Pembatalan** memindahkan tiket ke tabel arsip `CancelledTicket` lalu menghapus barisnya, sehingga nomor langsung bisa dipesan lagi dan unique constraint tetap konsisten.
 
 Migrasi hanya menambah kolom; seed memperbarui jadwal melalui upsert tanpa menghapus tiket yang sudah ada. Perubahan dilakukan dalam transaksi per tanggal dan dibatalkan bila rentang baru tidak mencakup tiket yang sudah terbit. Jika koneksi putus setelah pemesanan, tiket dapat ditemukan lewat menu Cari tiket.
@@ -98,7 +98,7 @@ Migrasi hanya menambah kolom; seed memperbarui jadwal melalui upsert tanpa mengh
 ## Respons perpindahan halaman
 
 - Link internal melakukan prefetch dan menampilkan respons langsung saat diklik. Loading boundary menjaga navigasi tetap responsif saat server sedang memuat data.
-- Halaman isi data memakai jadwal konfigurasi tanpa query database. Kuota terbaru tetap divalidasi dalam transaksi saat tombol Pesan tiket ditekan.
+- Halaman sesi menampilkan kuota terbaru dari database saat dibuka, tiap 20 detik, saat kembali ke tab, atau lewat tombol Perbarui kuota. Form memeriksa kesesuaian tanggal/sesi; kuota diperiksa lagi dalam transaksi ketika Pesan tiket ditekan.
 - Pemesanan memakai data yang sudah dibaca dalam transaksi untuk menghindari pembacaan ulang tiket dan sesi. Tombol tetap terkunci hingga halaman tiket terbuka.
 
 ### Impor produk dan stok POS

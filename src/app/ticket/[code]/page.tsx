@@ -33,7 +33,7 @@ export default async function TicketPage({
 
   return (
     <PageShell>
-      <Stepper current={2} />
+      <Stepper current={3} />
       {searchParams.baru && (
         <p role="status" className="mx-auto mb-5 max-w-sm rounded-xl border border-primary/20 bg-primary/[0.06] px-4 py-3 text-center text-sm text-primary">
           Pemesanan berhasil! Simpan tiket ini atau buka lagi kapan saja lewat link halaman ini.

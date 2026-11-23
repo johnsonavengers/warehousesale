@@ -43,16 +43,23 @@ try {
   assert.equal(tickets.length, 32);
   assert(tickets.every((t) => t.status === 201));
   assert.equal(new Set(tickets.map((t) => t.number)).size, 32);
-  assert(tickets.every((t) => Number.isInteger(t.number) && t.number >= 1 && t.number <= 300));
+  assert(tickets.every((t) => Number.isInteger(t.number) && t.number >= 101 && t.number <= 150));
   assert.equal(new Set(tickets.map((t) => t.code)).size, 32);
-  assert(tickets.every((t) => t.session === Math.floor((t.number - 1) / 50) + 1));
-  console.log("LULUS: 32 nomor acak unik, seluruh nomor sesuai rentang sesinya.");
+  assert(tickets.every((t) => t.session === 3));
+  console.log("LULUS: 32 nomor acak unik, seluruh tiket berada pada sesi 3 yang dipilih.");
   const duplicates = (await Promise.all(Array.from({ length: 4 }, () => worker("book", ["081288887777"])))).flat();
   assert.equal(duplicates.filter((t) => t.status === 201).length, 1);
   assert.equal(duplicates.filter((t) => t.status === 409).length, 3);
   const counts = await db.query('SELECT count(*)::int AS count, count(DISTINCT (date, "queueNumber"))::int AS unique FROM "Ticket"');
   assert.deepEqual(counts.rows[0], { count: 33, unique: 33 });
   console.log("LULUS: 4 request WhatsApp sama menghasilkan tepat 1 tiket. Total 33 tiket tanpa nomor ganda.");
+  const last = (await Promise.all(Array.from({ length: 4 }, (_, group) => worker("book", Array.from({ length: 6 }, (_, i) => `08127777${String(group * 6 + i).padStart(4, "0")}`))))).flat();
+  assert.equal(last.filter(t => t.status === 201).length, 17);
+  assert.equal(last.filter(t => t.status === 409).length, 7);
+  assert(last.filter(t => t.status === 201).every(t => t.session === 3));
+  const capacity = await db.query('SELECT count(*)::int AS count, count(DISTINCT "queueNumber")::int AS unique FROM "Ticket"');
+  assert.deepEqual(capacity.rows[0], { count: 50, unique: 50 });
+  console.log("LULUS: perebutan 17 slot terakhir menghasilkan tepat 50 tiket unik, tanpa pindah sesi atau melebihi kuota.");
 } finally {
   if (created) {
     await db.query('SET search_path TO public');

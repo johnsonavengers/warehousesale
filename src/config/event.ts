@@ -3,7 +3,7 @@
  */
 export const EVENT = {
   name: "Johnson Warehouse Sale",
-  tagline: "Cukup pilih tanggal. Sesi dan nomor antrian diacak otomatis oleh sistem.",
+  tagline: "Pilih tanggal dan jam kunjunganmu. Nomor antrian diberikan otomatis oleh sistem.",
   venue: "Lokasi Event",
   /** Path logo di folder /public (mis. "/logo.png"). Kosongkan untuk memakai inisial. */
   logo: "",

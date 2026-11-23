@@ -35,7 +35,7 @@ export default async function HomePage() {
     </section>
     <section id="tanggal" className="scroll-mt-28 border-t border-white/10 pt-8">
       <Stepper current={0} />
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Pilih tanggal</h2><p className="mt-2 text-sm text-stone-400">Satu tanggal, satu tiket. Sisanya kami siapkan.</p></div><span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-stone-300">November — Desember 2026</span></div>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Pilih tanggal</h2><p className="mt-2 text-sm text-stone-400">Pilih tanggal, lalu tentukan jam kunjunganmu.</p></div><span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-stone-300">November — Desember 2026</span></div>
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_280px]">
         <div className="space-y-4">
           {WEEKENDS.map((weekend, index) => <section key={weekend.label} className="card p-3.5 sm:p-5" aria-label={weekend.label}>
@@ -44,15 +44,15 @@ export default async function HomePage() {
               const day = days.find((d) => d.date === date);
               const disabled = !day || day.isPast || day.remaining === 0;
               const content = <><span className="text-[11px] font-medium text-stone-300">{label.split(",")[0]}</span><span className="my-2 text-[38px] font-medium leading-none tracking-tighter sm:text-5xl">{date.slice(-2)}</span><span className="text-[10px] text-stone-400">{date.slice(5, 7) === "11" ? "November" : "Desember"}</span><span className={"mt-3 text-[9px] font-medium sm:text-[11px] " + (disabled ? "text-stone-400" : "text-primary")}>{!day ? "Segera tersedia" : day.isPast ? "Sudah lewat" : !day.remaining ? "Kuota habis" : `${day.remaining} tiket tersisa`}</span></>;
-              return <li key={date}>{disabled ? <div data-testid={`day-${date}`} aria-disabled="true" className="date-card opacity-50">{content}</div> : <Link href={`/checkout?date=${date}`} data-testid={`day-${date}`} aria-label={`Pilih ${label} 2026, ${day.remaining} tiket tersisa`} className="date-card">{content}</Link>}</li>;
+              return <li key={date}>{disabled ? <div data-testid={`day-${date}`} aria-disabled="true" className="date-card opacity-50">{content}</div> : <Link href={`/${date}`} data-testid={`day-${date}`} aria-label={`Pilih ${label} 2026, ${day.remaining} tiket tersisa`} className="date-card">{content}</Link>}</li>;
             })}</ul>
           </section>)}
         </div>
         <aside className="card p-6 lg:sticky lg:top-28">
           <span className="mb-5 grid h-11 w-11 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary"><Icon name="ticket" /></span>
           <h3 className="text-lg font-semibold tracking-tight">Lebih simpel.<br />Tinggal datang.</h3>
-          <ol className="mt-6 space-y-5">{[["Pilih tanggal", "Tentukan hari yang pas untukmu."], ["Lengkapi data", "Isi nama dan nomor WhatsApp aktif."], ["Simpan tiketmu", "Sesi dan nomor diacak otomatis, lalu tertera di tiket."]].map(([title, desc], i) => <li key={title} className="flex gap-3"><span className="mt-0.5 text-xs font-medium text-primary">0{i + 1}</span><div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs leading-relaxed text-stone-400">{desc}</p></div></li>)}</ol>
-          <div className="mt-6 border-t border-white/10 pt-5 text-xs leading-relaxed text-stone-400"><span className="text-white">Datang sesuai sesi di tiket.</span><br />Sesi dan nomor diacak dari kuota yang tersedia. Satu nomor WhatsApp untuk satu tiket per tanggal.</div>
+          <ol className="mt-6 space-y-5">{[["Pilih tanggal", "Tentukan hari yang pas untukmu."], ["Pilih jam & isi data", "Pilih sesi, lalu isi nama dan nomor WhatsApp aktif."], ["Simpan tiketmu", "Jam sesuai pilihanmu dan nomor otomatis tertera di tiket."]].map(([title, desc], i) => <li key={title} className="flex gap-3"><span className="mt-0.5 text-xs font-medium text-primary">0{i + 1}</span><div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs leading-relaxed text-stone-400">{desc}</p></div></li>)}</ol>
+          <div className="mt-6 border-t border-white/10 pt-5 text-xs leading-relaxed text-stone-400"><span className="text-white">Datang sesuai sesi di tiket.</span><br />Pilih jam yang tersedia. Nomor antrian diberikan otomatis. Satu nomor WhatsApp untuk satu tiket per tanggal.</div>
         </aside>
       </div>
     </section>
