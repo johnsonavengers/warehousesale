@@ -101,6 +101,19 @@ Migrasi hanya menambah kolom; seed memperbarui jadwal melalui upsert tanpa mengh
 - Halaman isi data memakai jadwal konfigurasi tanpa query database. Kuota terbaru tetap divalidasi dalam transaksi saat tombol Pesan tiket ditekan.
 - Pemesanan memakai data yang sudah dibaca dalam transaksi untuk menghindari pembacaan ulang tiket dan sesi. Tombol tetap terkunci hingga halaman tiket terbuka.
 
+### Impor produk dan stok POS
+
+Buka **POS → Produk & stok → Impor Excel / CSV** (`/admin/pos/impor`). Unduh template, isi produk, lalu unggah dan periksa pratinjau sebelum menyimpan.
+
+- Format: `.xlsx` atau CSV UTF-8 (koma/titik koma/tab); maksimum 2 MB dan 500 produk. Excel membaca lembar **Produk**, atau lembar pertama jika nama itu tidak ada. `.xls` perlu disimpan ulang menjadi `.xlsx`.
+- Kolom **SKU, Stok** wajib. **Nama, Harga** wajib untuk SKU baru; kosongkan untuk mempertahankan nilai produk lama. SKU dinormalisasi menjadi huruf besar. Formatkan SKU sebagai teks untuk menjaga nol di depan.
+- Harga dan stok menggunakan angka bulat nonnegatif tanpa pemisah ribuan/desimal atau rumus. Stok `0` diterima. SKU ganda/baris invalid menolak seluruh file dengan rincian kesalahan.
+- **Stok akhir sesuai file** mengganti stok; **Tambahkan stok masuk** menjumlahkan stok sekarang dengan jumlah dalam file. Jangan mengimpor pengiriman yang sama sebagai impor baru dua kali.
+- Produk di luar file dan status aktif/nonaktif tetap. Perubahan stok dicatat dalam riwayat bersama nama file dan akun admin.
+- Pratinjau berlaku 30 menit dan terikat akun pembuatnya. Penyimpanan atomik: bila produk berubah karena kasir/edit lain setelah pratinjau, seluruh impor dibatalkan dan file harus diperiksa ulang.
+- Percobaan ulang penyimpanan memakai ID impor yang sama; tidak menambah stok dua kali. Jika koneksi terputus, gunakan **Coba simpan kembali** atau **Periksa impor sebelumnya** setelah muat ulang.
+- Migrasi `20261123010000_pos_import` menambahkan tabel pratinjau/riwayat impor tersendiri. Tidak membutuhkan environment baru dan tidak berhubungan dengan tiket.
+
 ## Tes
 
 ```bash

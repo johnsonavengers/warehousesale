@@ -41,6 +41,29 @@ try {
   assert.equal((await db.query('SELECT count(*)::int AS n FROM "PosStockMovement" WHERE "productId" = $1 AND kind = $2', [products.repeat, "SALE"])).rows[0].n, 1);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM "Ticket"')).rows[0].n, 0);
   console.log("LULUS: 4 pengiriman request sama menghasilkan 1 invoice dan 1 pengurangan stok; tabel tiket tetap kosong.");
+  const imported = await worker("import-setup");
+  const applied = await Promise.all(Array.from({ length: 4 }, () => worker("import-apply", { importId: imported.importId })));
+  assert(applied.every(row => row.status === 200), JSON.stringify(applied));
+  assert.equal((await db.query('SELECT stock FROM "PosProduct" WHERE id = $1', [imported.productId])).rows[0].stock, 15);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM "PosStockMovement" WHERE "productId" = $1 AND kind = $2', [imported.productId, "IMPORT"])).rows[0].n, 1);
+  console.log("LULUS: 4 penyimpanan impor bersamaan menambah stok hanya sekali (10 menjadi 15).");
+  const preview = await worker("import-preview");
+  const [importResult, sales] = await Promise.all([
+    worker("import-apply", { importId: preview.id }),
+    worker("sale", { productId: imported.productId, count: 4 }),
+  ]);
+  assert(sales.every(row => row.status === 201), JSON.stringify(sales));
+  assert([200, 409].includes(importResult.status), JSON.stringify(importResult));
+  const finalStock = (await db.query('SELECT stock FROM "PosProduct" WHERE id = $1', [imported.productId])).rows[0].stock;
+  assert.equal(finalStock, importResult.status === 200 ? 96 : 11);
+  const ledger = await db.query('SELECT sum(quantity)::int AS total FROM "PosStockMovement" WHERE "productId" = $1', [imported.productId]);
+  assert.equal(ledger.rows[0].total, finalStock);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM "Ticket"')).rows[0].n, 0);
+  console.log(`LULUS: impor bersamaan dengan 4 checkout menjaga stok dan riwayat konsisten (stok ${finalStock}).`);
+  console.log("Menguji kapasitas penuh: membuat lalu memperbarui 500 produk dalam satu file.");
+  const bulk = await worker("import-large");
+  assert.equal(bulk.count, 500);
+  console.log(`LULUS: 500 produk dibuat (${bulk.createMs} ms) dan diperbarui (${bulk.updateMs} ms), stok masing-masing 2.`);
 } finally {
   if (created) { await db.query('SET search_path TO public'); await db.query(`DROP SCHEMA "${schema}" CASCADE`); console.log("Schema uji POS dibersihkan; data production tidak diubah."); }
   await db.end();

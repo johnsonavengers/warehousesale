@@ -167,3 +167,17 @@ model PosStockMovement {
 
   @@index([productId, createdAt])
 }
+
+// Pratinjau disimpan di server agar percobaan ulang tidak menggandakan stok.
+model PosStockImport {
+  id           String @id @default(cuid())
+  filename     String
+  mode         String
+  cashierEmail String
+  rowsJson     String
+  status       String @default("PREVIEW")
+  revision     Int @default(0)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  appliedAt    DateTime?
+}
