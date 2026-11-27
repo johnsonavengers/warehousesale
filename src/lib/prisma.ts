@@ -10,7 +10,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 function createClient(): PrismaClient {
   const url = process.env.DATABASE_URL ?? "file:./dev.db";
   const adapter = /^postgres(ql)?:\/\//.test(url)
-    ? new PrismaPg({ connectionString: url }, { schema: new URL(url).searchParams.get("schema") ?? undefined })
+    ? new PrismaPg({
+        connectionString: url,
+        // Batasi koneksi setiap fungsi Vercel agar pool database tetap tersedia.
+        max: 3,
+        idleTimeoutMillis: 10_000,
+        connectionTimeoutMillis: 30_000,
+      }, { schema: new URL(url).searchParams.get("schema") ?? undefined })
     : new PrismaBetterSqlite3({ url });
   return new PrismaClient({ adapter });
 }

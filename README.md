@@ -161,6 +161,14 @@ SQLite tidak bisa dipakai di Vercel (filesystem tidak permanen), jadi production
 
 `npm run deploy:check` memeriksa variabel environment proses dan kesesuaian schema tanpa mengubah database; perintah ini tidak memuat `.env` lokal. Kelulusan pemeriksaan belum membuktikan koneksi database: koneksi baru digunakan oleh langkah migrasi berikutnya. Perubahan variabel Vercel berlaku pada deployment baru, sesuai [dokumentasi Vercel](https://vercel.com/docs/environment-variables).
 
+### Supabase untuk production
+
+Database website memakai schema `whs` dan akun PostgreSQL khusus aplikasi. `DATABASE_URL` menggunakan shared pooler **transaction mode** (port 6543); `DIRECT_URL` dan `DATABASE_URL_UNPOOLED` menggunakan **session mode** (port 5432) untuk migrasi. Ketiganya menyertakan `schema=whs`, `sslmode=verify-full`, dan `sslrootcert=certs/supabase-prod-ca-2021.crt`; koneksi transaction juga menyertakan `pgbouncer=true`. Simpan URL lengkap sebagai Secret di Vercel, bukan di Git.
+
+Sertifikat publik CA berasal dari [penyimpanan resmi Supabase](https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt). Next.js menyertakannya dalam semua fungsi server agar verifikasi TLS berjalan saat build maupun runtime. Fungsi Vercel ditempatkan di `hnd1` (Tokyo), sesuai wilayah database. Pool aplikasi dibatasi tiga koneksi per proses; uji PostgreSQL memeriksa nomor unik, batas 50 tiket per sesi, dan penolakan pendaftaran ganda.
+
+Pemindahan database harus mempertahankan ID, kode tiket, seluruh data POS, serta `_prisma_migrations`. Hentikan penulisan pada sumber sebelum salinan terakhir dan pergantian domain; jangan memindahkan website berdasarkan salinan lama saat pendaftaran masih berjalan. Cadangan data dan kredensial migrasi lokal disimpan di `.vercel/` yang diabaikan Git.
+
 ### Dua database: SQLite (lokal) dan PostgreSQL (production)
 
 `DATABASE_URL` menentukan semuanya. `prisma.config.ts` memilih schema & folder migrasi, dan `src/lib/prisma.ts` memilih driver:

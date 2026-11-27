@@ -41,7 +41,7 @@ try {
     worker("book", Array.from({ length: 8 }, (_, i) => `08129999${String(group * 8 + i).padStart(4, "0")}`))));
   const tickets = groups.flat();
   assert.equal(tickets.length, 32);
-  assert(tickets.every((t) => t.status === 201));
+  assert(tickets.every((t) => t.status === 201), JSON.stringify(tickets.filter((t) => t.status !== 201)));
   assert.equal(new Set(tickets.map((t) => t.number)).size, 32);
   assert(tickets.every((t) => Number.isInteger(t.number) && t.number >= 101 && t.number <= 150));
   assert.equal(new Set(tickets.map((t) => t.code)).size, 32);

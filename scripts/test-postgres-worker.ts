@@ -15,7 +15,8 @@ async function main() {
       const ticket = await createAutomaticTicket({ date: "2026-11-27", sessionId: session.id, name: "Uji konkurensi", phone });
       return { status: 201, number: ticket.queueNumber, code: ticket.code, session: ticket.session.order };
     } catch (error) {
-      return { status: (error as { status?: number }).status ?? 500 };
+      const failure = error as { status?: number; code?: string; message?: string };
+      return { status: failure.status ?? 500, errorCode: failure.code, error: failure.message };
     }
   }));
 }
